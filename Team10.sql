@@ -14,6 +14,7 @@ DROP TABLE PREFERS CASCADE CONSTRAINTS;
 DROP TABLE TRXLOG CASCADE CONSTRAINTS;
 DROP TABLE OWNS CASCADE CONSTRAINTS;
 DROP TABLE MUTUALDATE CASCADE CONSTRAINTS;
+DROP VIEW LATESTPRICE CASCADE CONSTRAINTS;
 PURGE RECYCLEBIN;
 
 
@@ -421,14 +422,22 @@ BEGIN
 END;
 /
 
+-- LATESTPRICE is a view that displays all existing funds' latest prices.
+CREATE OR REPLACE VIEW LATESTPRICE
+AS
+	SELECT symbol, max(p_date) AS l_date, max(price) AS m_price
+	FROM CLOSINGPRICE
+	GROUP BY symbol;
+
+-- funds_in_range prints out all current fund prices within a given range.
 CREATE OR REPLACE PROCEDURE funds_in_range(lo_limit IN float DEFAULT 0, hi_limit IN float DEFAULT 99999999)
-IS
+AS
 BEGIN
+	DBMS_OUTPUT.put_line('Prices within the range ' || lo_limit || ' and ' || hi_limit || ':');
 	FOR fund_rec IN (
-        SELECT symbol, price, max(p_date)
-		FROM CLOSINGPRICE c
+        SELECT symbol, price 
+		FROM LATESTPRICE
 		WHERE (price >= lo_limit) AND (price <= hi_limit)
-		GROUP BY symbol
 		ORDER BY price ASC )
 	LOOP
 		DBMS_OUTPUT.put_line (fund_rec.symbol || ': ' || fund_rec.price);
