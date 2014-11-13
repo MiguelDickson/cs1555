@@ -5,7 +5,6 @@
 
 ----------------------------------------------------------------------------------------------------
 --- DROP ALL TABLES TO MAKE SURE THE SCHEMA IS CLEAR
-PURGE RECYCLEBIN;
 DROP TABLE MUTUALFUND CASCADE CONSTRAINTS;
 DROP TABLE CLOSINGPRICE CASCADE CONSTRAINTS;
 DROP TABLE CUSTOMER CASCADE CONSTRAINTS;
@@ -15,6 +14,7 @@ DROP TABLE PREFERS CASCADE CONSTRAINTS;
 DROP TABLE TRXLOG CASCADE CONSTRAINTS;
 DROP TABLE OWNS CASCADE CONSTRAINTS;
 DROP TABLE MUTUALDATE CASCADE CONSTRAINTS;
+PURGE RECYCLEBIN;
 
 
 --DROP ALL FUNCTIONS/PROCEDURES/TRIGGERS AS ABOVE
@@ -184,6 +184,7 @@ INSERT INTO CLOSINGPRICE values('GS', 15, '02-APR-14');
 
 SET SERVEROUTPUT ON;
 
+-- new_balance returns the sum of a balance 'x' and an incremental number 'incr_val'.
 CREATE OR REPLACE FUNCTION new_balance(x in number, incr_val in number)
 	RETURN number IS final_val number;
 BEGIN
@@ -192,20 +193,22 @@ BEGIN
 END;
 /
 
-CREATE OR REPLACE FUNCTION sale_proceeds(symbol in varchar, shares in number, sell_date date)
+-- sale_proceeds returns the proceeds of a number of shares 'shares' for a fund 'symbol' on a date 'sell_date'.
+CREATE OR REPLACE FUNCTION sale_proceeds(sym in varchar, shares in number, sell_date date)
     RETURN number IS proceeds number;
 sale_price number;
 BEGIN
     SELECT price INTO sale_price
     FROM CLOSINGPRICE
-    WHERE p_date = sell_date;
+    WHERE p_date = sell_date AND symbol = sym;
     
     proceeds := sale_price * shares;
     --dbms_output.put_line(proceeds);
     RETURN(proceeds);
 END;
 /
- 
+
+-- ON_SALE, upon a sale, decrements the seller's shares by that amount and increases the seller's balance by the value of the sold shares.
 CREATE OR REPLACE TRIGGER ON_SALE
 AFTER 
 INSERT on TRXLOG
@@ -225,14 +228,15 @@ BEGIN
     END IF;
 END;
 /
-    
-CREATE OR REPLACE FUNCTION share_prices(symbol in varchar, shares in number, buy_date date)
+   
+-- share_prices returns the cost of a number of shares 'shares' for a fund 'symbol' on a date 'sell_date'.
+CREATE OR REPLACE FUNCTION share_prices(sym in varchar, shares in number, buy_date date)
     RETURN number IS cost number;
 buy_price number;
 BEGIN
     SELECT price INTO buy_price
     FROM CLOSINGPRICE
-    WHERE p_date = buy_date;
+    WHERE p_date = buy_date AND symbol = sym;
     
     cost := buy_price * shares;
     --dbms_output.put_line(cost);
@@ -240,6 +244,7 @@ BEGIN
 END;
 /
 
+-- ON_BUY, upon a purchase, decrements the seller's shares by that amount and increases the seller's balance by the value of the sold shares.
 CREATE OR REPLACE TRIGGER ON_BUY
 AFTER 
 INSERT on TRXLOG
@@ -379,7 +384,7 @@ BEGIN
         for i in 1..numb_prefs LOOP
             money_alloc := get_n_preference(i, recent_alloc) * cur_balance;
             shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
-            UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol =new.symbol;  
+            UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol = :new.symbol;  
             cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
             
         end loop;
@@ -391,31 +396,42 @@ END;
 /
 
 --TESTING SALE TRANSACTION
-
+PROMPT Testing SALE Transaction:;
+PROMPT SALE: CUSTOMER for Mike;
 select * from customer where login = 'mike';
+PROMPT SALE: OWNS for Mike;
 select * from owns where login = 'mike';
 
 INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'sell', 10, 15, 150);
 
+PROMPT SALE: TRXLOG for Mike;
 select * from trxlog;
+PROMPT SALE: CUSTOMER for Mike;
 select * from customer where login = 'mike';
+PROMPT SALE: OWNS for Mike;
 select * from owns where login = 'mike';
 
 --
 --TESTING BUY TRANSACTION
-
+PROMPT Testing BUY Transaction:;
 INSERT INTO TRXLOG values('1', 'mike', 'RE', '03-APR-14', 'buy', 10, 15, 150);
 
+PROMPT BUY: CUSTOMER for Mike;
 select * from customer where login = 'mike';
+PROMPT BUY: OWNS for Mike;
 select * from owns where login = 'mike';
 
 --
 --TESTING DEPOSIT TRANSACTION
-
+PROMPT Testing DEPOSIT Transaction:;
+PROMPT DEPOSIT: CUSTOMER for Mike;
 select * from customer where login = 'mike';
+PROMPT DEPOSIT: OWNS for Mike;
 select * from owns where login = 'mike';
 
 INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'deposit', NULL, NULL, 1000000);
 
+PROMPT DEPOSIT: CUSTOMER for Mike;
 select * from customer where login = 'mike';
+PROMPT DEPOSIT: OWNS for Mike;
 select * from owns where login = 'mike';
