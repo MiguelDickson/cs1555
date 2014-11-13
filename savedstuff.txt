@@ -1,0 +1,69 @@
+
+declare 
+    result number;
+begin
+    result:= get_last_allocation('mike');
+    dbms_output.put_line('maybe that worked');
+end;
+/
+
+
+CREATE OR REPLACE TRIGGER ON_DEPOSIT 
+AFTER 
+INSERT on TRXLOG
+FOR EACH ROW
+WHEN (new.action = 'deposit')
+DECLARE 
+    recent_alloc number;
+    numb_prefs number;
+    cur_balance number;
+    price_shares number;
+BEGIN   
+    SELECT balance into cur_balance 
+    from CUSTOMER
+    WHERE (:new.login = login);    
+    
+    recent_alloc:= 
+    
+    
+    price_shares:= share_prices(:new.symbol, :new.num_shares, :new.t_date);
+    IF (cur_balance >= :new.num_shares)
+    THEN
+    UPDATE CUSTOMER set balance = balance - price_shares;
+    UPDATE OWNS set shares = shares + :new.num_shares;    
+    END IF;
+END;
+
+
+
+--TESTING SALE TRANSACTION
+
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'sell', 10, 15, 150);
+
+select * from trxlog;
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+--
+--TESTING BUY TRANSACTION
+
+INSERT INTO TRXLOG values('1', 'mike', 'RE', '03-APR-14', 'buy', 10, 15, 150);
+
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+--
+--TESTING DEPOSIT TRANSACTION
+
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'deposit', NULL, NULL, 1000000);
+
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+

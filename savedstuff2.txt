@@ -1,0 +1,27 @@
+
+CREATE OR REPLACE TRIGGER ON_DEPOSIT 
+AFTER 
+INSERT on TRXLOG
+FOR EACH ROW
+WHEN (new.action = 'deposit')
+DECLARE 
+    recent_alloc number;
+    numb_prefs number;
+    cur_balance number;
+    price_shares number;
+BEGIN   
+    SELECT balance into cur_balance 
+    from CUSTOMER
+    WHERE (:new.login = login);    
+    
+    recent_alloc:= get_last_allocation(:new.login);
+    numb_prefs:= get_number_preferences(recent_alloc);
+    
+    
+    price_shares:= share_prices(:new.symbol, :new.num_shares, :new.t_date);
+    IF (cur_balance >= :new.num_shares)
+    THEN
+    UPDATE CUSTOMER set balance = balance - price_shares;
+    UPDATE OWNS set shares = shares + :new.num_shares;    
+    END IF;
+END;

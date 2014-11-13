@@ -124,6 +124,7 @@ INSERT INTO MUTUALDATE values('30-JAN-14');
 INSERT INTO MUTUALDATE values('28-MAR-14');
 INSERT INTO MUTUALDATE values('29-MAR-14');
 INSERT INTO MUTUALDATE values('30-MAR-14');
+INSERT INTO MUTUALDATE values('31-MAR-14');
 INSERT INTO MUTUALDATE values('01-APR-14');
 INSERT INTO MUTUALDATE values('02-APR-14');
 INSERT INTO MUTUALDATE values('03-APR-14');
@@ -153,36 +154,33 @@ INSERT INTO PREFERS values('2', 'RE', .4);
 INSERT INTO PREFERS values('2', 'STB', .3);
 INSERT INTO PREFERS values('2', 'GS', .2);
 
-INSERT INTO CLOSINGPRICE values('MM', 10, '28-MAR-14');
-INSERT INTO CLOSINGPRICE values('MM', 11, '29-MAR-14');
-INSERT INTO CLOSINGPRICE values('MM', 12, '30-MAR-14');
+--INSERT INTO CLOSINGPRICE values('MM', 10, '28-MAR-14');
+--INSERT INTO CLOSINGPRICE values('MM', 11, '29-MAR-14');
+--INSERT INTO CLOSINGPRICE values('MM', 12, '30-MAR-14');
 INSERT INTO CLOSINGPRICE values('MM', 15, '31-MAR-14');
 INSERT INTO CLOSINGPRICE values('MM', 14, '01-APR-14');
 INSERT INTO CLOSINGPRICE values('MM', 15, '02-APR-14');
 
-INSERT INTO CLOSINGPRICE values('RE', 10, '28-MAR-14'); 
-INSERT INTO CLOSINGPRICE values('RE', 11, '29-MAR-14');
-INSERT INTO CLOSINGPRICE values('RE', 12, '30-MAR-14');
+--INSERT INTO CLOSINGPRICE values('RE', 10, '28-MAR-14'); 
+--INSERT INTO CLOSINGPRICE values('RE', 11, '29-MAR-14');
+--INSERT INTO CLOSINGPRICE values('RE', 12, '30-MAR-14');
 INSERT INTO CLOSINGPRICE values('RE', 15, '31-MAR-14');
 INSERT INTO CLOSINGPRICE values('RE', 14, '01-APR-14');
 INSERT INTO CLOSINGPRICE values('RE', 15, '02-APR-14');
 
-INSERT INTO CLOSINGPRICE values('STB', 10, '28-MAR-14'); 
-INSERT INTO CLOSINGPRICE values('STB', 11, '29-MAR-14');
-INSERT INTO CLOSINGPRICE values('STB', 12, '30-MAR-14');
+--INSERT INTO CLOSINGPRICE values('STB', 10, '28-MAR-14'); 
+--INSERT INTO CLOSINGPRICE values('STB', 11, '29-MAR-14');
+--INSERT INTO CLOSINGPRICE values('STB', 12, '30-MAR-14');
 INSERT INTO CLOSINGPRICE values('STB', 15, '31-MAR-14');
 INSERT INTO CLOSINGPRICE values('STB', 14, '01-APR-14');
 INSERT INTO CLOSINGPRICE values('STB', 15, '02-APR-14');
 
-INSERT INTO CLOSINGPRICE values('STB', 10, '28-MAR-14'); 
-INSERT INTO CLOSINGPRICE values('STB', 11, '29-MAR-14');
-INSERT INTO CLOSINGPRICE values('STB', 12, '30-MAR-14');
-INSERT INTO CLOSINGPRICE values('STB', 15, '31-MAR-14');
-INSERT INTO CLOSINGPRICE values('STB', 14, '01-APR-14');
-INSERT INTO CLOSINGPRICE values('STB', 15, '02-APR-14');
-
-
-commit;
+--INSERT INTO CLOSINGPRICE values('GS', 10, '28-MAR-14'); 
+--INSERT INTO CLOSINGPRICE values('GS', 11, '29-MAR-14');
+--INSERT INTO CLOSINGPRICE values('GS', 12, '30-MAR-14');
+INSERT INTO CLOSINGPRICE values('GS', 15, '31-MAR-14');
+INSERT INTO CLOSINGPRICE values('GS', 14, '01-APR-14');
+INSERT INTO CLOSINGPRICE values('GS', 15, '02-APR-14');
 
 SET SERVEROUTPUT ON;
 
@@ -222,8 +220,8 @@ BEGIN
     
     IF (shares_held >= :new.num_shares)
     THEN
-    UPDATE CUSTOMER set balance = balance + sale_proceeds(:new.symbol, :new.num_shares, :new.t_date);
-    UPDATE OWNS set shares = shares_held - :new.num_shares;    
+    UPDATE CUSTOMER set balance = balance + sale_proceeds(:new.symbol, :new.num_shares, :new.t_date) WHERE login = :new.login;
+    UPDATE OWNS set shares = shares_held - :new.num_shares WHERE login = :new.login;    
     END IF;
 END;
 /
@@ -258,8 +256,8 @@ BEGIN
     price_shares:= share_prices(:new.symbol, :new.num_shares, :new.t_date);
     IF (cur_balance >= :new.num_shares)
     THEN
-    UPDATE CUSTOMER set balance = balance - price_shares;
-    UPDATE OWNS set shares = shares + :new.num_shares;    
+    UPDATE CUSTOMER set balance = balance - price_shares WHERE login = :new.login;
+    UPDATE OWNS set shares = shares + :new.num_shares WHERE login = :new.login AND symbol = :new.symbol;    
     END IF;
 END;
 /
@@ -299,6 +297,36 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE FUNCTION get_n_preference(nth in number, alloc in number)
+    RETURN float IS npref float;
+BEGIN
+           SELECT percentage into npref
+           from
+               (SELECT percentage, rownum as snum
+                FROM
+                    (select * FROM PREFERS where alloc = allocation_no ORDER BY percentage DESC)
+                )
+            WHERE snum = nth;
+      dbms_output.put_line(npref);
+      RETURN(npref);
+END;
+/
+
+CREATE OR REPLACE FUNCTION get_n_prefsymbol(nth in number, alloc in number)
+    RETURN varchar IS symb varchar(20);
+BEGIN
+           SELECT symbol into symb
+           from
+               (SELECT symbol, percentage, rownum as snum
+                FROM
+                    (select * FROM PREFERS where alloc = allocation_no ORDER BY percentage DESC)
+                )
+            WHERE snum = nth;
+      dbms_output.put_line(symb);
+      RETURN(symb);
+END;
+/
+
 CREATE OR REPLACE TRIGGER ON_DEPOSIT 
 AFTER 
 INSERT on TRXLOG
@@ -306,28 +334,83 @@ FOR EACH ROW
 WHEN (new.action = 'deposit')
 DECLARE 
     recent_alloc number;
+    money_alloc number;
+    shares_bought number;
     numb_prefs number;
     cur_balance number;
     price_shares number;
+    shares_not_purchased number;
 BEGIN   
-    SELECT balance into cur_balance 
-    from CUSTOMER
-    WHERE (:new.login = login);    
-    
+    --SELECT :new.amount into cur_balance 
+    --from CUSTOMER
+    --WHERE (:new.login = login); 
+    cur_balance:= :new.amount;
+
+    shares_not_purchased:= 0;
     recent_alloc:= get_last_allocation(:new.login);
     numb_prefs:= get_number_preferences(recent_alloc);
     
     for i in 1..numb_prefs LOOP
-        dbms_output.put_line(i);
-    END LOOP;
+        money_alloc := get_n_preference(i, recent_alloc) * cur_balance;
+        dbms_output.put_line('This amount of the current balance of the allocated amount is allocated:');
+        dbms_output.put_line(money_alloc);
+        shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
+        IF (shares_bought = 0)
+        THEN
+        shares_not_purchased:=1;
+        END IF;        
+        dbms_output.put_line('This number of shares were purchased:');
+        dbms_output.put_line(shares_bought);
+        cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
+        dbms_output.put_line('Balance is now:');
+        dbms_output.put_line(cur_balance);    
+    END LOOP; 
     
-    --price_shares:= share_prices(:new.symbol, :new.num_shares, :new.t_date);
-    --IF (cur_balance >= :new.num_shares)
-    --THEN
-    --UPDATE CUSTOMER set balance = balance - price_shares;
-    --UPDATE OWNS set shares = shares + :new.num_shares;    
-    --END IF;
+        dbms_output.put_line('End balance is:');
+        dbms_output.put_line(cur_balance);    
+        
+    IF (shares_not_purchased = 1)
+        THEN
+        dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
+        UPDATE CUSTOMER set balance = balance + :new.amount;
+    ELSE
+        cur_balance:= :new.amount;
+        
+        for i in 1..numb_prefs LOOP
+            money_alloc := get_n_preference(i, recent_alloc) * cur_balance;
+            shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
+            UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol =new.symbol;  
+            cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
+            
+        end loop;
+        
+        UPDATE CUSTOMER set balance = balance + cur_balance;
+        
+     END IF;           
 END;
+/
+
+--TESTING SALE TRANSACTION
+
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'sell', 10, 15, 150);
+
+select * from trxlog;
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+--
+--TESTING BUY TRANSACTION
+
+INSERT INTO TRXLOG values('1', 'mike', 'RE', '03-APR-14', 'buy', 10, 15, 150);
+
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+--
+--TESTING DEPOSIT TRANSACTION
 
 select * from customer where login = 'mike';
 select * from owns where login = 'mike';
