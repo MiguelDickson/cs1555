@@ -421,6 +421,21 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE PROCEDURE funds_in_range(lo_limit IN float DEFAULT 0, hi_limit IN float DEFAULT 99999999)
+IS
+BEGIN
+	FOR fund_rec IN (
+        SELECT symbol, price, max(p_date)
+		FROM CLOSINGPRICE c
+		WHERE (price >= lo_limit) AND (price <= hi_limit)
+		GROUP BY symbol
+		ORDER BY price ASC )
+	LOOP
+		DBMS_OUTPUT.put_line (fund_rec.symbol || ': ' || fund_rec.price);
+	END LOOP;
+END;
+/
+
 --TESTING SALE TRANSACTION
 PROMPT Testing SALE Transaction:;
 PROMPT SALE: CUSTOMER for Mike;
@@ -461,5 +476,8 @@ PROMPT DEPOSIT: CUSTOMER for Mike;
 select * from customer where login = 'mike';
 PROMPT DEPOSIT: OWNS for Mike;
 select * from owns where login = 'mike';
+
 --
---
+--TESTING funds_in_range PROCEDURE
+EXEC funds_in_range;
+EXEC funds_in_range(10, 20);
