@@ -421,6 +421,21 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE PROCEDURE funds_in_range(lo_limit IN float DEFAULT 0, hi_limit IN float DEFAULT 99999999)
+IS
+DECLARE
+	CURSOR f_cursor
+	IS
+		SELECT symbol, price
+		FROM CLOSINGPRICE
+		WHERE 
+		HAVING p_date = max(p_date)
+		ORDER BY 
+BEGIN
+
+END;
+/
+
 --TESTING SALE TRANSACTION
 PROMPT Testing SALE Transaction:;
 PROMPT SALE: CUSTOMER for Mike;
