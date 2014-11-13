@@ -5,7 +5,7 @@
 
 ----------------------------------------------------------------------------------------------------
 --- DROP ALL TABLES TO MAKE SURE THE SCHEMA IS CLEAR
-
+PURGE RECYCLEBIN;
 DROP TABLE MUTUALFUND CASCADE CONSTRAINTS;
 DROP TABLE CLOSINGPRICE CASCADE CONSTRAINTS;
 DROP TABLE CUSTOMER CASCADE CONSTRAINTS;
@@ -15,10 +15,12 @@ DROP TABLE PREFERS CASCADE CONSTRAINTS;
 DROP TABLE TRXLOG CASCADE CONSTRAINTS;
 DROP TABLE OWNS CASCADE CONSTRAINTS;
 DROP TABLE MUTUALDATE CASCADE CONSTRAINTS;
-PURGE RECYCLEBIN;
+
 
 --DROP ALL FUNCTIONS/PROCEDURES/TRIGGERS AS ABOVE
-DROP TRIGGER ON_SALE;
+--DROP FUNCTION new_balance;
+--DROP FUNCTION sale_proceeds;
+--DROP TRIGGER ON_SALE;
 
 
 --- Relational schemas: The following schemas should be used.
@@ -119,12 +121,15 @@ INSERT INTO MUTUALDATE values('11-JAN-14');
 INSERT INTO MUTUALDATE values('16-JAN-14');
 INSERT INTO MUTUALDATE values('23-JAN-14');
 INSERT INTO MUTUALDATE values('30-JAN-14');
+INSERT INTO MUTUALDATE values('03-APR-14');
 
 INSERT INTO CUSTOMER values('mike', 'Mike', 'mike@betterfuture.com', '1st street', 'pwd', 750);
 INSERT INTO CUSTOMER values('mary', 'Mary', 'mary@betterfuture.com', '2nd street', 'pwd', 0);
 
 INSERT INTO MUTUALFUND values('MM', 'money-market', 'money-market,conservative', 'fixed', '06-JAN-14');
 INSERT INTO MUTUALFUND values('RE', 'real-estate',  'real estate', 'fixed', '09-JAN-14');
+
+INSERT INTO CLOSINGPRICE values('RE', 15, '03-APR-14');
 
 INSERT INTO OWNS values('mike','RE', 50);
 
@@ -133,7 +138,108 @@ commit;
 --CREATE OR REPLACE TRIGGER ON_PURCHASE 
 --BEFORE UPDATE OF 
 
---CREATE OR REPLACE TRIGGER ON_SALE
---AFTER 
---DELETE ON OWNS
+SET SERVEROUTPUT ON;
+
+CREATE OR REPLACE FUNCTION new_balance(x in number, incr_val in number)
+	RETURN number IS final_val number;
+BEGIN
+	final_val := x + incr_val;
+	RETURN(final_val);
+END;
+/
+
+CREATE OR REPLACE FUNCTION sale_proceeds(symbol in varchar, shares in number, sell_date date)
+    RETURN number IS proceeds number;
+sale_price number;
+BEGIN
+    SELECT price INTO sale_price
+    FROM CLOSINGPRICE
+    WHERE p_date = sell_date;
+    
+    proceeds := sale_price * shares;
+    --dbms_output.put_line(proceeds);
+    RETURN(proceeds);
+END;
+/
+ 
+CREATE OR REPLACE TRIGGER ON_SALE
+AFTER 
+INSERT on TRXLOG
+FOR EACH ROW
+WHEN (new.action = 'sell') 
+DECLARE 
+    shares_held number;
+BEGIN   
+    SELECT shares into shares_held 
+    from OWNS
+    WHERE (:new.login = login);    
+    
+    IF (shares_held >= :new.num_shares)
+    THEN
+    UPDATE CUSTOMER set balance = balance + sale_proceeds(:new.symbol, :new.num_shares, :new.t_date);
+    UPDATE OWNS set shares = shares_held - :new.num_shares;    
+    END IF;
+END;
+/
+    
+--TESTING SALE TRANSACTION
+
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'sell', 10, 15, 150);
+
+select * from trxlog;
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+--
+
+CREATE OR REPLACE FUNCTION share_prices(symbol in varchar, shares in number, buy_date date)
+    RETURN number IS cost number;
+buy_price number;
+BEGIN
+    SELECT price INTO buy_price
+    FROM CLOSINGPRICE
+    WHERE p_date = buy_date;
+    
+    cost := buy_price * shares;
+    --dbms_output.put_line(cost);
+    RETURN(cost);
+END;
+/
+
+CREATE OR REPLACE TRIGGER ON_BUY
+AFTER 
+INSERT on TRXLOG
+FOR EACH ROW
+WHEN (new.action = 'buy')
+DECLARE 
+    cur_balance number;
+    price_shares number;
+BEGIN   
+    SELECT balance into cur_balance 
+    from CUSTOMER
+    WHERE (:new.login = login);    
+    
+    price_shares:= share_prices(:new.symbol, :new.num_shares, :new.t_date);
+    IF (cur_balance >= :new.num_shares)
+    THEN
+    UPDATE CUSTOMER set balance = balance - price_shares;
+    UPDATE OWNS set shares = shares + :new.num_shares;    
+    END IF;
+END;
+/
+
+--TESTING BUY TRANSACTION
+
+INSERT INTO TRXLOG values('1', 'mike', 'RE', '03-APR-14', 'buy', 10, 15, 150);
+
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
+
+
+
+
+
 
