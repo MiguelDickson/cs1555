@@ -17,3 +17,7 @@ DROP FUNCTION get_n_preference;
 DROP TRIGGER ON_SALE;
 DROP TRIGGER ON_BUY;
 DROP TRIGGER ON_DEPOSIT;
+DROP FUNCTION get_n_prefsymbol;
+DROP FUNCTION has_shares;
+commit;
+purge recyclebin;

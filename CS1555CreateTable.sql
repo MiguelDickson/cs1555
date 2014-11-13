@@ -332,6 +332,25 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE FUNCTION has_shares(log_name in varchar, symb in varchar)
+    RETURN number IS bool_shares number;
+num_results number;
+BEGIN
+      SELECT COUNT(*) into num_results
+      FROM OWNS
+      WHERE login = log_name AND symbol = symb;
+      IF num_results = 0 
+        THEN
+          dbms_output.put_line(log_name || 'owns no shares of ' || symb);
+          RETURN(0);
+      ELSE
+          dbms_output.put_line(log_name || 'owns some shares of ' || symb);  
+          RETURN(1);
+      END IF;       
+END;
+/
+
+
 CREATE OR REPLACE TRIGGER ON_DEPOSIT 
 AFTER 
 INSERT on TRXLOG
@@ -345,6 +364,7 @@ DECLARE
     cur_balance number;
     price_shares number;
     shares_not_purchased number;
+    owned_shares number;
 BEGIN   
     --SELECT :new.amount into cur_balance 
     --from CUSTOMER
@@ -382,11 +402,17 @@ BEGIN
         cur_balance:= :new.amount;
         
         for i in 1..numb_prefs LOOP
+            owned_shares := has_shares(:new.login, get_n_prefsymbol(i,recent_alloc));
             money_alloc := get_n_preference(i, recent_alloc) * :new.amount;
             shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
-            UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol = get_n_prefsymbol(i,recent_alloc);  
-            cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
-            
+            IF owned_shares = 1
+                THEN
+                UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol = get_n_prefsymbol(i,recent_alloc);  
+                cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
+                ELSE
+                INSERT into OWNS values(:new.login, get_n_prefsymbol(i,recent_alloc), shares_bought);
+                cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
+            END IF;
         end loop;
         
         UPDATE CUSTOMER set balance = balance + cur_balance;
