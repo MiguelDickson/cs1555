@@ -422,25 +422,32 @@ BEGIN
 END;
 /
 
--- LATESTPRICE is a view that displays all existing funds' latest prices.
-CREATE OR REPLACE VIEW LATESTPRICE
+-- LASTUPDATE is a view that displays all funds' latest dates.
+CREATE OR REPLACE VIEW LASTUPDATE
 AS
-	SELECT symbol, max(p_date) AS l_date, max(price) AS m_price
+	SELECT symbol, max(p_date) AS l_date
 	FROM CLOSINGPRICE
 	GROUP BY symbol;
+
+-- LATESTPRICE is a view that displays all funds' latest prices.
+CREATE OR REPLACE VIEW LATESTPRICE
+AS
+	SELECT b.symbol, b.price, b.p_date
+	FROM LASTUPDATE a JOIN CLOSINGPRICE b
+	ON b.symbol = a.symbol AND b.p_date = a.l_date;
 
 -- funds_in_range prints out all current fund prices within a given range.
 CREATE OR REPLACE PROCEDURE funds_in_range(lo_limit IN float DEFAULT 0, hi_limit IN float DEFAULT 99999999)
 AS
 BEGIN
-	DBMS_OUTPUT.put_line('Prices within the range ' || lo_limit || ' and ' || hi_limit || ':');
+	DBMS_OUTPUT.put_line('Prices within the range $' || lo_limit || ' and $' || hi_limit || ':');
 	FOR fund_rec IN (
         SELECT symbol, price 
 		FROM LATESTPRICE
 		WHERE (price >= lo_limit) AND (price <= hi_limit)
 		ORDER BY price ASC )
 	LOOP
-		DBMS_OUTPUT.put_line (fund_rec.symbol || ': ' || fund_rec.price);
+		DBMS_OUTPUT.put_line (fund_rec.symbol || ':' || chr(9) || '$' || fund_rec.price);
 	END LOOP;
 END;
 /
@@ -489,4 +496,4 @@ select * from owns where login = 'mike';
 --
 --TESTING funds_in_range PROCEDURE
 EXEC funds_in_range;
-EXEC funds_in_range(10, 20);
+EXEC funds_in_range(100, 1000);
