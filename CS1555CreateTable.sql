@@ -122,21 +122,65 @@ INSERT INTO MUTUALDATE values('16-JAN-14');
 INSERT INTO MUTUALDATE values('23-JAN-14');
 INSERT INTO MUTUALDATE values('30-JAN-14');
 INSERT INTO MUTUALDATE values('28-MAR-14');
+INSERT INTO MUTUALDATE values('29-MAR-14');
+INSERT INTO MUTUALDATE values('30-MAR-14');
+INSERT INTO MUTUALDATE values('01-APR-14');
+INSERT INTO MUTUALDATE values('02-APR-14');
 INSERT INTO MUTUALDATE values('03-APR-14');
 
-INSERT INTO CUSTOMER values('mike', 'Mike', 'mike@betterfuture.com', '1st street', 'pwd', 750);
+INSERT INTO CUSTOMER values('mike', 'Mike', 'mike@betterfuture.com', '1st street', 'pwd', 0);
 INSERT INTO CUSTOMER values('mary', 'Mary', 'mary@betterfuture.com', '2nd street', 'pwd', 0);
 
 INSERT INTO MUTUALFUND values('MM', 'money-market', 'money-market,conservative', 'fixed', '06-JAN-14');
 INSERT INTO MUTUALFUND values('RE', 'real-estate',  'real estate', 'fixed', '09-JAN-14');
+INSERT INTO MUTUALFUND values('STB', 'short-term-bonds', 'short term bonds', 'bonds', '06-JAN-14');
+INSERT INTO MUTUALFUND values('GS', 'general-stocks',  'general stocks', 'stocks', '09-JAN-14');
 
-INSERT INTO CLOSINGPRICE values('RE', 15, '03-APR-14');
+INSERT INTO CLOSINGPRICE values('RE', 10000, '03-APR-14');
+INSERT INTO CLOSINGPRICE values('MM', 1000, '03-APR-14');
+INSERT INTO CLOSINGPRICE values('STB', 100, '03-APR-14');
+INSERT INTO CLOSINGPRICE values('GS', 10, '03-APR-14');
+
 
 INSERT INTO OWNS values('mike','RE', 50);
 
 INSERT INTO ALLOCATION values('0', 'mike', '28-MAR-14');
 INSERT INTO ALLOCATION values('1', 'mary', '28-MAR-14');
 INSERT INTO ALLOCATION values('2', 'mike', '03-APR-14');
+
+INSERT INTO PREFERS values('2', 'MM', .1);
+INSERT INTO PREFERS values('2', 'RE', .4);
+INSERT INTO PREFERS values('2', 'STB', .3);
+INSERT INTO PREFERS values('2', 'GS', .2);
+
+INSERT INTO CLOSINGPRICE values('MM', 10, '28-MAR-14');
+INSERT INTO CLOSINGPRICE values('MM', 11, '29-MAR-14');
+INSERT INTO CLOSINGPRICE values('MM', 12, '30-MAR-14');
+INSERT INTO CLOSINGPRICE values('MM', 15, '31-MAR-14');
+INSERT INTO CLOSINGPRICE values('MM', 14, '01-APR-14');
+INSERT INTO CLOSINGPRICE values('MM', 15, '02-APR-14');
+
+INSERT INTO CLOSINGPRICE values('RE', 10, '28-MAR-14'); 
+INSERT INTO CLOSINGPRICE values('RE', 11, '29-MAR-14');
+INSERT INTO CLOSINGPRICE values('RE', 12, '30-MAR-14');
+INSERT INTO CLOSINGPRICE values('RE', 15, '31-MAR-14');
+INSERT INTO CLOSINGPRICE values('RE', 14, '01-APR-14');
+INSERT INTO CLOSINGPRICE values('RE', 15, '02-APR-14');
+
+INSERT INTO CLOSINGPRICE values('STB', 10, '28-MAR-14'); 
+INSERT INTO CLOSINGPRICE values('STB', 11, '29-MAR-14');
+INSERT INTO CLOSINGPRICE values('STB', 12, '30-MAR-14');
+INSERT INTO CLOSINGPRICE values('STB', 15, '31-MAR-14');
+INSERT INTO CLOSINGPRICE values('STB', 14, '01-APR-14');
+INSERT INTO CLOSINGPRICE values('STB', 15, '02-APR-14');
+
+INSERT INTO CLOSINGPRICE values('STB', 10, '28-MAR-14'); 
+INSERT INTO CLOSINGPRICE values('STB', 11, '29-MAR-14');
+INSERT INTO CLOSINGPRICE values('STB', 12, '30-MAR-14');
+INSERT INTO CLOSINGPRICE values('STB', 15, '31-MAR-14');
+INSERT INTO CLOSINGPRICE values('STB', 14, '01-APR-14');
+INSERT INTO CLOSINGPRICE values('STB', 15, '02-APR-14');
+
 
 commit;
 
@@ -227,15 +271,68 @@ BEGIN
     from (select allocation_no from allocation where login = log_name order by p_date DESC) S
     where rownum <=1
     ORDER by rownum;    
-    dbms_output.put_line(last_alloc);
+    --dbms_output.put_line(last_alloc);
     RETURN(last_alloc);
 END;
 /
 
+CREATE OR REPLACE FUNCTION get_number_preferences(alloc_no in number)
+    RETURN number is num_pref number;
+BEGIN   
+    select count(symbol) into num_pref
+    from prefers
+    where allocation_no = alloc_no;
+    --dbms_output.put_line(num_pref);
+    RETURN(num_pref);
+END;
+/
 
+CREATE OR REPLACE FUNCTION get_last_closing_price(share_name in varchar)
+    RETURN number IS close_price number;
+BEGIN   
+    select * into close_price
+    from (select price from CLOSINGPRICE where symbol = share_name order by p_date DESC) S
+    where rownum <=1
+    ORDER by rownum;    
+    --dbms_output.put_line(close_price);
+    RETURN(close_price);
+END;
+/
 
+CREATE OR REPLACE TRIGGER ON_DEPOSIT 
+AFTER 
+INSERT on TRXLOG
+FOR EACH ROW
+WHEN (new.action = 'deposit')
+DECLARE 
+    recent_alloc number;
+    numb_prefs number;
+    cur_balance number;
+    price_shares number;
+BEGIN   
+    SELECT balance into cur_balance 
+    from CUSTOMER
+    WHERE (:new.login = login);    
+    
+    recent_alloc:= get_last_allocation(:new.login);
+    numb_prefs:= get_number_preferences(recent_alloc);
+    
+    for i in 1..numb_prefs LOOP
+        dbms_output.put_line(i);
+    END LOOP;
+    
+    --price_shares:= share_prices(:new.symbol, :new.num_shares, :new.t_date);
+    --IF (cur_balance >= :new.num_shares)
+    --THEN
+    --UPDATE CUSTOMER set balance = balance - price_shares;
+    --UPDATE OWNS set shares = shares + :new.num_shares;    
+    --END IF;
+END;
 
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';
 
+INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'deposit', NULL, NULL, 1000000);
 
-
-
+select * from customer where login = 'mike';
+select * from owns where login = 'mike';

@@ -11,4 +11,8 @@ DROP FUNCTION new_balance;
 DROP FUNCTION sale_proceeds;
 DROP FUNCTION share_prices;
 DROP FUNCTION get_last_allocation;
+DROP FUNCTION get_number_preferences;
+DROP FUNCTION get_last_closing_price;
 DROP TRIGGER ON_SALE;
+DROP TRIGGER ON_BUY;
+DROP TRIGGER ON_DEPOSIT;
