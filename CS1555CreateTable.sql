@@ -121,6 +121,7 @@ INSERT INTO MUTUALDATE values('11-JAN-14');
 INSERT INTO MUTUALDATE values('16-JAN-14');
 INSERT INTO MUTUALDATE values('23-JAN-14');
 INSERT INTO MUTUALDATE values('30-JAN-14');
+INSERT INTO MUTUALDATE values('28-MAR-14');
 INSERT INTO MUTUALDATE values('03-APR-14');
 
 INSERT INTO CUSTOMER values('mike', 'Mike', 'mike@betterfuture.com', '1st street', 'pwd', 750);
@@ -133,10 +134,11 @@ INSERT INTO CLOSINGPRICE values('RE', 15, '03-APR-14');
 
 INSERT INTO OWNS values('mike','RE', 50);
 
-commit;
+INSERT INTO ALLOCATION values('0', 'mike', '28-MAR-14');
+INSERT INTO ALLOCATION values('1', 'mary', '28-MAR-14');
+INSERT INTO ALLOCATION values('2', 'mike', '03-APR-14');
 
---CREATE OR REPLACE TRIGGER ON_PURCHASE 
---BEFORE UPDATE OF 
+commit;
 
 SET SERVEROUTPUT ON;
 
@@ -182,19 +184,6 @@ BEGIN
 END;
 /
     
---TESTING SALE TRANSACTION
-
-select * from customer where login = 'mike';
-select * from owns where login = 'mike';
-
-INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'sell', 10, 15, 150);
-
-select * from trxlog;
-select * from customer where login = 'mike';
-select * from owns where login = 'mike';
-
---
-
 CREATE OR REPLACE FUNCTION share_prices(symbol in varchar, shares in number, buy_date date)
     RETURN number IS cost number;
 buy_price number;
@@ -231,12 +220,19 @@ BEGIN
 END;
 /
 
---TESTING BUY TRANSACTION
+CREATE OR REPLACE FUNCTION get_last_allocation(log_name in varchar)
+    RETURN number IS last_alloc number;
+BEGIN   
+    select * into last_alloc
+    from (select allocation_no from allocation where login = log_name order by p_date DESC) S
+    where rownum <=1
+    ORDER by rownum;    
+    dbms_output.put_line(last_alloc);
+    RETURN(last_alloc);
+END;
+/
 
-INSERT INTO TRXLOG values('1', 'mike', 'RE', '03-APR-14', 'buy', 10, 15, 150);
 
-select * from customer where login = 'mike';
-select * from owns where login = 'mike';
 
 
 
