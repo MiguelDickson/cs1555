@@ -356,7 +356,7 @@ BEGIN
     numb_prefs:= get_number_preferences(recent_alloc);
     
     for i in 1..numb_prefs LOOP
-        money_alloc := get_n_preference(i, recent_alloc) * cur_balance;
+        money_alloc := get_n_preference(i, recent_alloc) * :new.amount;
         dbms_output.put_line('This amount of the current balance of the allocated amount is allocated:');
         dbms_output.put_line(money_alloc);
         shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
@@ -382,9 +382,9 @@ BEGIN
         cur_balance:= :new.amount;
         
         for i in 1..numb_prefs LOOP
-            money_alloc := get_n_preference(i, recent_alloc) * cur_balance;
+            money_alloc := get_n_preference(i, recent_alloc) * :new.amount;
             shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
-            UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol = :new.symbol;  
+            UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol = get_n_prefsymbol(i,recent_alloc);  
             cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
             
         end loop;
@@ -429,9 +429,11 @@ select * from customer where login = 'mike';
 PROMPT DEPOSIT: OWNS for Mike;
 select * from owns where login = 'mike';
 
-INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'deposit', NULL, NULL, 1000000);
+INSERT INTO TRXLOG values('2', 'mike', 'RE', '03-APR-14', 'deposit', NULL, NULL, 1000000);
 
 PROMPT DEPOSIT: CUSTOMER for Mike;
 select * from customer where login = 'mike';
 PROMPT DEPOSIT: OWNS for Mike;
 select * from owns where login = 'mike';
+--
+--
