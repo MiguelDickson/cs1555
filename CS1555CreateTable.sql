@@ -312,7 +312,7 @@ BEGIN
                     (select * FROM PREFERS where alloc = allocation_no ORDER BY percentage DESC)
                 )
             WHERE snum = nth;
-      dbms_output.put_line(npref);
+      --dbms_output.put_line(npref);
       RETURN(npref);
 END;
 /
@@ -327,7 +327,7 @@ BEGIN
                     (select * FROM PREFERS where alloc = allocation_no ORDER BY percentage DESC)
                 )
             WHERE snum = nth;
-      dbms_output.put_line(symb);
+      --dbms_output.put_line(symb);
       RETURN(symb);
 END;
 /
@@ -341,10 +341,10 @@ BEGIN
       WHERE login = log_name AND symbol = symb;
       IF num_results = 0 
         THEN
-          dbms_output.put_line(log_name || 'owns no shares of ' || symb);
+          --dbms_output.put_line(log_name || 'owns no shares of ' || symb);
           RETURN(0);
       ELSE
-          dbms_output.put_line(log_name || 'owns some shares of ' || symb);  
+          --dbms_output.put_line(log_name || 'owns some shares of ' || symb);  
           RETURN(1);
       END IF;       
 END;
@@ -377,26 +377,26 @@ BEGIN
     
     for i in 1..numb_prefs LOOP
         money_alloc := get_n_preference(i, recent_alloc) * :new.amount;
-        dbms_output.put_line('This amount of the current balance of the allocated amount is allocated:');
-        dbms_output.put_line(money_alloc);
+        --dbms_output.put_line('This amount of the current balance of the allocated amount is allocated:');
+        --dbms_output.put_line(money_alloc);
         shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
         IF (shares_bought = 0)
         THEN
         shares_not_purchased:=1;
         END IF;        
-        dbms_output.put_line('This number of shares were purchased:');
-        dbms_output.put_line(shares_bought);
+        --dbms_output.put_line('This number of shares were purchased:');
+        --dbms_output.put_line(shares_bought);
         cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
-        dbms_output.put_line('Balance is now:');
-        dbms_output.put_line(cur_balance);    
+        --dbms_output.put_line('Balance is now:');
+        --dbms_output.put_line(cur_balance);    
     END LOOP; 
     
-        dbms_output.put_line('End balance is:');
-        dbms_output.put_line(cur_balance);    
+        --dbms_output.put_line('End balance is:');
+        --dbms_output.put_line(cur_balance);    
         
     IF (shares_not_purchased = 1)
         THEN
-        dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
+        --dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
         UPDATE CUSTOMER set balance = balance + :new.amount;
     ELSE
         cur_balance:= :new.amount;
