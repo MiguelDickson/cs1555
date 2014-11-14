@@ -254,6 +254,7 @@ WHEN (new.action = 'buy')
 DECLARE 
     cur_balance number;
     price_shares number;
+    has_shares number;
 BEGIN   
     SELECT balance into cur_balance 
     from CUSTOMER
@@ -263,7 +264,12 @@ BEGIN
     IF (cur_balance >= :new.num_shares)
     THEN
     UPDATE CUSTOMER set balance = balance - price_shares WHERE login = :new.login;
-    UPDATE OWNS set shares = shares + :new.num_shares WHERE login = :new.login AND symbol = :new.symbol;    
+       IF (has_shares(:new.login, :new.symbol) =1)
+       THEN
+       UPDATE OWNS set shares = shares + :new.num_shares WHERE login = :new.login AND symbol = :new.symbol;    
+       ELSE
+       INSERT INTO OWNS values(:new.login, :new.symbol, :new.num_shares);
+       END IF;
     END IF;
 END;
 /
@@ -471,8 +477,10 @@ select * from owns where login = 'mike';
 --
 --TESTING BUY TRANSACTION
 PROMPT Testing BUY Transaction:;
-INSERT INTO TRXLOG values('1', 'mike', 'RE', '03-APR-14', 'buy', 10, 15, 150);
+INSERT INTO TRXLOG values('1', 'mike', 'GS', '03-APR-14', 'buy', 10, 15, 150);
 
+PROMPT BUY: TRXLOG for Mike;
+select * from trxlog where trans_id='1';
 PROMPT BUY: CUSTOMER for Mike;
 select * from customer where login = 'mike';
 PROMPT BUY: OWNS for Mike;
