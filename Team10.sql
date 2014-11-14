@@ -245,6 +245,24 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE FUNCTION has_shares(log_name in varchar, symb in varchar)
+    RETURN number IS bool_shares number;
+num_results number;
+BEGIN
+      SELECT COUNT(*) into num_results
+      FROM OWNS
+      WHERE login = log_name AND symbol = symb;
+      IF num_results = 0 
+        THEN
+          --dbms_output.put_line(log_name || 'owns no shares of ' || symb);
+          RETURN(0);
+      ELSE
+          --dbms_output.put_line(log_name || 'owns some shares of ' || symb);  
+          RETURN(1);
+      END IF;       
+END;
+/
+
 -- ON_BUY, upon a purchase, decrements the seller's shares by that amount and increases the seller's balance by the value of the sold shares.
 CREATE OR REPLACE TRIGGER ON_BUY
 AFTER 
@@ -254,7 +272,7 @@ WHEN (new.action = 'buy')
 DECLARE 
     cur_balance number;
     price_shares number;
-    has_shares number;
+    check_shares number;
 BEGIN   
     SELECT balance into cur_balance 
     from CUSTOMER
@@ -264,7 +282,8 @@ BEGIN
     IF (cur_balance >= :new.num_shares)
     THEN
     UPDATE CUSTOMER set balance = balance - price_shares WHERE login = :new.login;
-       IF (has_shares(:new.login, :new.symbol) =1)
+       check_shares := has_shares(:new.login, :new.symbol);
+       IF (check_shares =1)
        THEN
        UPDATE OWNS set shares = shares + :new.num_shares WHERE login = :new.login AND symbol = :new.symbol;    
        ELSE
@@ -336,24 +355,6 @@ BEGIN
             WHERE snum = nth;
       --dbms_output.put_line(symb);
       RETURN(symb);
-END;
-/
-
-CREATE OR REPLACE FUNCTION has_shares(log_name in varchar, symb in varchar)
-    RETURN number IS bool_shares number;
-num_results number;
-BEGIN
-      SELECT COUNT(*) into num_results
-      FROM OWNS
-      WHERE login = log_name AND symbol = symb;
-      IF num_results = 0 
-        THEN
-          --dbms_output.put_line(log_name || 'owns no shares of ' || symb);
-          RETURN(0);
-      ELSE
-          --dbms_output.put_line(log_name || 'owns some shares of ' || symb);  
-          RETURN(1);
-      END IF;       
 END;
 /
 
