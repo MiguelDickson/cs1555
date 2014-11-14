@@ -245,6 +245,7 @@ BEGIN
 END;
 /
 
+-- has_shares returns a 1 if user 'log_name' owns shares in 'symb'.
 CREATE OR REPLACE FUNCTION has_shares(log_name in varchar, symb in varchar)
     RETURN number IS bool_shares number;
 num_results number;
@@ -293,6 +294,7 @@ BEGIN
 END;
 /
 
+-- get_last_allocation returns the last allocation of user 'log_name'.
 CREATE OR REPLACE FUNCTION get_last_allocation(log_name in varchar)
     RETURN number IS last_alloc number;
 BEGIN   
@@ -305,6 +307,7 @@ BEGIN
 END;
 /
 
+-- get_number_preferences returns the current number preferences of an allocation 'alloc_no'.
 CREATE OR REPLACE FUNCTION get_number_preferences(alloc_no in number)
     RETURN number is num_pref number;
 BEGIN   
@@ -316,6 +319,7 @@ BEGIN
 END;
 /
 
+-- get_last_closing_price returns the last closing price of a fund 'share_name'.
 CREATE OR REPLACE FUNCTION get_last_closing_price(share_name in varchar)
     RETURN number IS close_price number;
 BEGIN   
@@ -328,6 +332,7 @@ BEGIN
 END;
 /
 
+-- get_n_preference returns the 'nth' preference of an allocation 'alloc'.
 CREATE OR REPLACE FUNCTION get_n_preference(nth in number, alloc in number)
     RETURN float IS npref float;
 BEGIN
@@ -343,6 +348,7 @@ BEGIN
 END;
 /
 
+-- get_n_preference returns the 'nth' preference symbol of an allocation 'alloc'.
 CREATE OR REPLACE FUNCTION get_n_prefsymbol(nth in number, alloc in number)
     RETURN varchar IS symb varchar(20);
 BEGIN
@@ -358,7 +364,7 @@ BEGIN
 END;
 /
 
-
+-- ON_DEPOSIT, upon a purchase, adds to a user's balance, and checks to see if it is enough to fulfill the user's current allocation of buying preferences.
 CREATE OR REPLACE TRIGGER ON_DEPOSIT 
 AFTER 
 INSERT on TRXLOG
@@ -460,49 +466,50 @@ END;
 /
 
 --TESTING SALE TRANSACTION
-PROMPT Testing SALE Transaction:;
-PROMPT SALE: CUSTOMER for Mike;
+PROMPT :::TESTING SALE TRANSACTION:::;
+PROMPT SALE: CUSTOMER for Mike before;
 select * from customer where login = 'mike';
-PROMPT SALE: OWNS for Mike;
+PROMPT SALE: OWNS for Mike before;
 select * from owns where login = 'mike';
 
 INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'sell', 10, 15, 150);
 
-PROMPT SALE: TRXLOG for Mike;
+PROMPT SALE: TRXLOG for Mike after;
 select * from trxlog;
-PROMPT SALE: CUSTOMER for Mike;
+PROMPT SALE: CUSTOMER for Mike after;
 select * from customer where login = 'mike';
-PROMPT SALE: OWNS for Mike;
+PROMPT SALE: OWNS for Mike after;
 select * from owns where login = 'mike';
 
 --
 --TESTING BUY TRANSACTION
-PROMPT Testing BUY Transaction:;
+PROMPT :::TESTING BUY TRANSACTION:::;
 INSERT INTO TRXLOG values('1', 'mike', 'GS', '03-APR-14', 'buy', 10, 15, 150);
 
-PROMPT BUY: TRXLOG for Mike;
+PROMPT BUY: TRXLOG for Mike after;
 select * from trxlog where trans_id='1';
-PROMPT BUY: CUSTOMER for Mike;
+PROMPT BUY: CUSTOMER for Mike after;
 select * from customer where login = 'mike';
-PROMPT BUY: OWNS for Mike;
+PROMPT BUY: OWNS for Mike after;
 select * from owns where login = 'mike';
 
 --
 --TESTING DEPOSIT TRANSACTION
-PROMPT Testing DEPOSIT Transaction:;
-PROMPT DEPOSIT: CUSTOMER for Mike;
+PROMPT :::TESTING DEPOSIT TRANSACTION:::;
+PROMPT DEPOSIT: CUSTOMER for Mike before;
 select * from customer where login = 'mike';
-PROMPT DEPOSIT: OWNS for Mike;
+PROMPT DEPOSIT: OWNS for Mike before;
 select * from owns where login = 'mike';
 
 INSERT INTO TRXLOG values('2', 'mike', 'RE', '03-APR-14', 'deposit', NULL, NULL, 1000000);
 
-PROMPT DEPOSIT: CUSTOMER for Mike;
+PROMPT DEPOSIT: CUSTOMER for Mike after;
 select * from customer where login = 'mike';
-PROMPT DEPOSIT: OWNS for Mike;
+PROMPT DEPOSIT: OWNS for Mike after;
 select * from owns where login = 'mike';
 
 --
 --TESTING funds_in_range PROCEDURE
+PROMPT :::TESTING funds_in_range PROCEDURE:::;
 EXEC funds_in_range;
 EXEC funds_in_range(100, 1000);
