@@ -440,60 +440,68 @@ AS
 CREATE OR REPLACE PROCEDURE funds_in_range(lo_limit IN float DEFAULT 0, hi_limit IN float DEFAULT 99999999)
 AS
 BEGIN
-	DBMS_OUTPUT.put_line('Prices within the range $' || lo_limit || ' and $' || hi_limit || ':');
-	FOR fund_rec IN (
-        SELECT symbol, price 
-		FROM LATESTPRICE
-		WHERE (price >= lo_limit) AND (price <= hi_limit)
-		ORDER BY price ASC )
-	LOOP
-		DBMS_OUTPUT.put_line (fund_rec.symbol || ':' || chr(9) || '$' || fund_rec.price);
-	END LOOP;
+	IF (lo_limit > hi_limit)
+    THEN
+		DBMS_OUTPUT.put_line('ERROR: Lower limit of $' || lo_limit || ' is higher than higher limit of $' || hi_limit ||'.');
+    ELSE
+		DBMS_OUTPUT.put_line('Prices within the range $' || lo_limit || ' and $' || hi_limit || ':');
+		FOR fund_rec IN (
+			SELECT symbol, price 
+			FROM LATESTPRICE
+			WHERE (price >= lo_limit) AND (price <= hi_limit)
+			ORDER BY price ASC )
+		LOOP
+			DBMS_OUTPUT.put_line (fund_rec.symbol || ':' || chr(9) || '$' || fund_rec.price);
+		END LOOP;
+	END IF;
 END;
 /
 
 --TESTING SALE TRANSACTION
-PROMPT Testing SALE Transaction:;
-PROMPT SALE: CUSTOMER for Mike;
+PROMPT :::TESTING SALE TRANSACTION:::;
+PROMPT SALE: CUSTOMER for Mike before;
 select * from customer where login = 'mike';
-PROMPT SALE: OWNS for Mike;
+PROMPT SALE: OWNS for Mike before;
 select * from owns where login = 'mike';
 
 INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'sell', 10, 15, 150);
 
-PROMPT SALE: TRXLOG for Mike;
+PROMPT SALE: TRXLOG for Mike after;
 select * from trxlog;
-PROMPT SALE: CUSTOMER for Mike;
+PROMPT SALE: CUSTOMER for Mike after;
 select * from customer where login = 'mike';
-PROMPT SALE: OWNS for Mike;
+PROMPT SALE: OWNS for Mike after;
 select * from owns where login = 'mike';
 
 --
 --TESTING BUY TRANSACTION
-PROMPT Testing BUY Transaction:;
+PROMPT :::TESTING BUY TRANSACTION:::;
 INSERT INTO TRXLOG values('1', 'mike', 'RE', '03-APR-14', 'buy', 10, 15, 150);
 
-PROMPT BUY: CUSTOMER for Mike;
+PROMPT BUY: CUSTOMER for Mike after;
 select * from customer where login = 'mike';
-PROMPT BUY: OWNS for Mike;
+PROMPT BUY: OWNS for Mike after;
 select * from owns where login = 'mike';
 
 --
 --TESTING DEPOSIT TRANSACTION
-PROMPT Testing DEPOSIT Transaction:;
-PROMPT DEPOSIT: CUSTOMER for Mike;
+PROMPT :::TESTING DEPOSIT TRANSACTION:::;
+PROMPT DEPOSIT: CUSTOMER for Mike before;
 select * from customer where login = 'mike';
-PROMPT DEPOSIT: OWNS for Mike;
+PROMPT DEPOSIT: OWNS for Mike before;
 select * from owns where login = 'mike';
 
 INSERT INTO TRXLOG values('2', 'mike', 'RE', '03-APR-14', 'deposit', NULL, NULL, 1000000);
 
-PROMPT DEPOSIT: CUSTOMER for Mike;
+PROMPT DEPOSIT: CUSTOMER for Mike after;
 select * from customer where login = 'mike';
-PROMPT DEPOSIT: OWNS for Mike;
+PROMPT DEPOSIT: OWNS for Mike after;
 select * from owns where login = 'mike';
 
 --
 --TESTING funds_in_range PROCEDURE
+PROMPT :::TESTING PROCEDURE funds_in_range:::;
 EXEC funds_in_range;
 EXEC funds_in_range(100, 1000);
+
+--
