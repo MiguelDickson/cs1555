@@ -367,9 +367,9 @@ END;
 -- ON_DEPOSIT, upon a purchase, adds to a user's balance, and checks to see if it is enough to fulfill the user's current allocation of buying preferences.
 CREATE OR REPLACE TRIGGER ON_DEPOSIT 
 AFTER 
-INSERT on TRXLOG
+UPDATE on CUSTOMER
 FOR EACH ROW
-WHEN (new.action = 'deposit')
+WHEN (new.balance > old.balance)
 DECLARE 
     recent_alloc number;
     money_alloc number;
@@ -383,14 +383,14 @@ BEGIN
     --SELECT :new.amount into cur_balance 
     --from CUSTOMER
     --WHERE (:new.login = login); 
-    cur_balance:= :new.amount;
+    cur_balance:= :new.balance;
 
     shares_not_purchased:= 0;
     recent_alloc:= get_last_allocation(:new.login);
     numb_prefs:= get_number_preferences(recent_alloc);
     
     for i in 1..numb_prefs LOOP
-        money_alloc := get_n_preference(i, recent_alloc) * :new.amount;
+        money_alloc := get_n_preference(i, recent_alloc) * :new.balance;
         --dbms_output.put_line('This amount of the current balance of the allocated amount is allocated:');
         --dbms_output.put_line(money_alloc);
         shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
@@ -410,14 +410,14 @@ BEGIN
         
     IF (shares_not_purchased = 1)
         THEN
-        --dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
-        UPDATE CUSTOMER set balance = balance + :new.amount;
+        dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
+        --UPDATE CUSTOMER set balance = balance + :new.amount;
     ELSE
-        cur_balance:= :new.amount;
+        cur_balance:= :new.balance;
         
         for i in 1..numb_prefs LOOP
             owned_shares := has_shares(:new.login, get_n_prefsymbol(i,recent_alloc));
-            money_alloc := get_n_preference(i, recent_alloc) * :new.amount;
+            money_alloc := get_n_preference(i, recent_alloc) * :new.balance;
             shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
             IF owned_shares = 1
                 THEN
@@ -429,12 +429,14 @@ BEGIN
             END IF;
         end loop;
         
-        UPDATE CUSTOMER set balance = balance + cur_balance;
+        UPDATE CUSTOMER set balance = cur_balance;
         
      END IF;           
 END;
 /
 
+--CREATE OR REPLACE PROCEDURE deposit(
+/*
 -- LASTUPDATE is a view that displays all funds' latest dates.
 CREATE OR REPLACE VIEW LASTUPDATE
 AS
@@ -513,3 +515,5 @@ select * from owns where login = 'mike';
 PROMPT :::TESTING funds_in_range PROCEDURE:::;
 EXEC funds_in_range;
 EXEC funds_in_range(100, 1000);
+
+*/
