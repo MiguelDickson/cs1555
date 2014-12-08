@@ -450,13 +450,31 @@ CREATE OR REPLACE PROCEDURE deposit(logi IN varchar, symb IN varchar, numshare I
 AS
     has_shares number;
 BEGIN
-    IF (numshare < 0)   
+    IF numshare < 0
+        THEN
         dbms_output.put_line('Cannot sell negative shares bro!!!');
     ELSE
-        dbms_output.put_line('blah');
+        SELECT shares INTO has_shares
+        FROM OWNS
+        WHERE login = logi AND symbol = symb; 
+
+        IF numshare <= has_shares
+            THEN
+            dbms_output.put_line('Selling shares!');
+            UPDATE OWNS set shares = has_shares - numshare WHERE login = logi AND symbol = symb;
+        ELSE
+            dbms_output.put_line('Cannot sell more shares than you have, bro!!');
+        END IF;
     END IF;
 END;
 /
+
+--Testing:
+select * from owns where login = 'mike';
+
+
+
+
 
 /*
 -- LATESTPRICE is a view that displays all funds' latest prices.
@@ -487,7 +505,7 @@ PROMPT :::TESTING SALE TRANSACTION:::;
 PROMPT SALE: CUSTOMER for Mike before;
 select * from customer where login = 'mike';
 PROMPT SALE: OWNS for Mike before;
-select * from owns where login = 'mike';
+
 
 INSERT INTO TRXLOG values('0', 'mike', 'RE', '03-APR-14', 'sell', 10, 15, 150);
 
