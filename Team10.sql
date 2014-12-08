@@ -1,6 +1,7 @@
 ----------------------------------------------------------------------------------------------------
 --- Name: John Lee, Miguel Dickson (Group 10)
 --- Pitt ID: JOL59, LMD90
+---
 ----------------------------------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------------------------------
@@ -185,6 +186,15 @@ INSERT INTO CLOSINGPRICE values('GS', 15, '02-APR-14');
 
 SET SERVEROUTPUT ON;
 
+
+
+-- LASTUPDATE is a view that displays all funds' latest dates.
+CREATE OR REPLACE VIEW LASTUPDATE
+AS
+	SELECT symbol, max(p_date) AS l_date
+	FROM CLOSINGPRICE
+	GROUP BY symbol;
+    
 -- new_balance returns the sum of a balance 'x' and an incremental number 'incr_val'.
 CREATE OR REPLACE FUNCTION new_balance(x in number, incr_val in number)
 	RETURN number IS final_val number;
@@ -212,23 +222,21 @@ END;
 -- ON_SALE, upon a sale, decrements the seller's shares by that amount and increases the seller's balance by the value of the sold shares.
 CREATE OR REPLACE TRIGGER ON_SALE
 AFTER 
-INSERT on TRXLOG
+UPDATE on OWNS
 FOR EACH ROW
-WHEN (new.action = 'sell') 
-DECLARE 
-    shares_held number;
-BEGIN   
-    SELECT shares into shares_held 
-    from OWNS
-    WHERE (:new.login = login);    
+WHEN (new.shares < old.shares)
+DECLARE
+    newdate date;
+BEGIN    
+    SELECT l_date INTO newdate
+    FROM LASTUPDATE
+    WHERE symbol = :new.symbol;
     
-    IF (shares_held >= :new.num_shares)
-    THEN
-    UPDATE CUSTOMER set balance = balance + sale_proceeds(:new.symbol, :new.num_shares, :new.t_date) WHERE login = :new.login;
-    UPDATE OWNS set shares = shares_held - :new.num_shares WHERE login = :new.login;    
-    END IF;
+    UPDATE CUSTOMER set balance = balance + sale_proceeds(:new.symbol, (:old.shares - :new.shares), newdate) WHERE login = :new.login;
 END;
 /
+   
+
    
 -- share_prices returns the cost of a number of shares 'shares' for a fund 'symbol' on a date 'sell_date'.
 CREATE OR REPLACE FUNCTION share_prices(sym in varchar, shares in number, buy_date date)
@@ -265,6 +273,7 @@ END;
 /
 
 -- ON_BUY, upon a purchase, decrements the seller's shares by that amount and increases the seller's balance by the value of the sold shares.
+
 CREATE OR REPLACE TRIGGER ON_BUY
 AFTER 
 INSERT on TRXLOG
@@ -293,6 +302,7 @@ BEGIN
     END IF;
 END;
 /
+
 
 -- get_last_allocation returns the last allocation of user 'log_name'.
 CREATE OR REPLACE FUNCTION get_last_allocation(log_name in varchar)
@@ -435,15 +445,20 @@ BEGIN
 END;
 /
 
---CREATE OR REPLACE PROCEDURE deposit(
-/*
--- LASTUPDATE is a view that displays all funds' latest dates.
-CREATE OR REPLACE VIEW LASTUPDATE
+--
+CREATE OR REPLACE PROCEDURE deposit(logi IN varchar, symb IN varchar, numshare IN number)
 AS
-	SELECT symbol, max(p_date) AS l_date
-	FROM CLOSINGPRICE
-	GROUP BY symbol;
+    has_shares number;
+BEGIN
+    IF (numshare < 0)   
+        dbms_output.put_line('Cannot sell negative shares bro!!!');
+    ELSE
+        dbms_output.put_line('blah');
+    END IF;
+END;
+/
 
+/*
 -- LATESTPRICE is a view that displays all funds' latest prices.
 CREATE OR REPLACE VIEW LATESTPRICE
 AS
