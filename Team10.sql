@@ -194,6 +194,13 @@ AS
 	SELECT symbol, max(p_date) AS l_date
 	FROM CLOSINGPRICE
 	GROUP BY symbol;
+   
+--LATESTPRICE is a view that displays all funds' latest prices.
+CREATE OR REPLACE VIEW LATESTPRICE
+AS
+	SELECT b.symbol, b.price, b.p_date
+	FROM LASTUPDATE a JOIN CLOSINGPRICE b
+	ON b.symbol = a.symbol AND b.p_date = a.l_date;
     
 -- new_balance returns the sum of a balance 'x' and an incremental number 'incr_val'.
 CREATE OR REPLACE FUNCTION new_balance(x in number, incr_val in number)
@@ -272,37 +279,6 @@ BEGIN
 END;
 /
 
--- ON_BUY, upon a purchase, decrements the seller's shares by that amount and increases the seller's balance by the value of the sold shares.
-
-CREATE OR REPLACE TRIGGER ON_BUY
-AFTER 
-INSERT on TRXLOG
-FOR EACH ROW
-WHEN (new.action = 'buy')
-DECLARE 
-    cur_balance number;
-    price_shares number;
-    check_shares number;
-BEGIN   
-    SELECT balance into cur_balance 
-    from CUSTOMER
-    WHERE (:new.login = login);    
-    
-    price_shares:= share_prices(:new.symbol, :new.num_shares, :new.t_date);
-    IF (cur_balance >= :new.num_shares)
-    THEN
-    UPDATE CUSTOMER set balance = balance - price_shares WHERE login = :new.login;
-       check_shares := has_shares(:new.login, :new.symbol);
-       IF (check_shares =1)
-       THEN
-       UPDATE OWNS set shares = shares + :new.num_shares WHERE login = :new.login AND symbol = :new.symbol;    
-       ELSE
-       INSERT INTO OWNS values(:new.login, :new.symbol, :new.num_shares);
-       END IF;
-    END IF;
-END;
-/
-
 
 -- get_last_allocation returns the last allocation of user 'log_name'.
 CREATE OR REPLACE FUNCTION get_last_allocation(log_name in varchar)
@@ -374,8 +350,29 @@ BEGIN
 END;
 /
 
+
+
+CREATE OR REPLACE PROCEDURE deposit(logi IN varchar, amoun IN float)
+AS
+    old_balance number;
+BEGIN
+    IF amoun < 0
+        THEN
+        dbms_output.put_line('Cannot deposit negative money bro!!!');
+    ELSE
+        SELECT balance INTO old_balance
+        FROM CUSTOMER
+        WHERE login = logi;
+    
+        UPDATE CUSTOMER set balance = old_balance + amoun WHERE login = logi;
+    END IF;
+END;
+/
+
+
 -- ON_DEPOSIT, upon a purchase, adds to a user's balance, and checks to see if it is enough to fulfill the user's current allocation of buying preferences.
-CREATE OR REPLACE TRIGGER ON_DEPOSIT 
+
+CREATE OR REPLACE TRIGGER on_deposit
 AFTER 
 UPDATE on CUSTOMER
 FOR EACH ROW
@@ -445,11 +442,11 @@ BEGIN
 END;
 /
 
---
-CREATE OR REPLACE PROCEDURE deposit(logi IN varchar, symb IN varchar, numshare IN number)
+CREATE OR REPLACE PROCEDURE sale(logi IN varchar, symb IN varchar, numshare IN number)
 AS
     has_shares number;
 BEGIN
+    execute immediate 'ALTER TRIGGER on_deposit DISABLE';
     IF numshare < 0
         THEN
         dbms_output.put_line('Cannot sell negative shares bro!!!');
@@ -458,7 +455,7 @@ BEGIN
         FROM OWNS
         WHERE login = logi AND symbol = symb; 
 
-        IF numshare <= has_shares
+        IF numshare <= has_shares   
             THEN
             dbms_output.put_line('Selling shares!');
             UPDATE OWNS set shares = has_shares - numshare WHERE login = logi AND symbol = symb;
@@ -466,23 +463,68 @@ BEGIN
             dbms_output.put_line('Cannot sell more shares than you have, bro!!');
         END IF;
     END IF;
+    execute immediate 'ALTER TRIGGER on_deposit ENABLE';
 END;
 /
 
+
+--
+CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number)
+AS
+    has_shares number;
+    curr_price number;
+    curr_balance number;
+    price_shares number;
+BEGIN
+    execute immediate 'ALTER TRIGGER on_deposit DISABLE';
+    IF numshare < 0
+        THEN
+        dbms_output.put_line('Cannot buy negative shares bro!!!');
+    ELSE
+        SELECT shares INTO has_shares
+        FROM OWNS
+        WHERE login = logi AND symbol = symb; 
+        
+        SELECT balance INTO curr_balance
+        FROM CUSTOMER
+        WHERE login = logi;
+        
+        SELECT price INTO curr_price
+        FROM LATESTPRICE
+        WHERE symbol = symb;
+        
+        price_shares := price * numshare;
+        
+        IF curr_balance < price_shares
+            THEN
+            dbms_output.put_line('Cannot sell more shares than you have, bro!!');
+        ELSE
+            UPDATE OWNS set shares = has_shares + numshare WHERE login = logi AND symbol = symb;
+            UPDATE CUSTOMER set balance = balance - price_shares WHERE login = logi;  
+            
+        END IF;
+    END IF;
+    execute immediate 'ALTER TRIGGER on_deposit ENABLE';
+END;
+/
+
+
+
+
+
 --Testing:
+
+exec deposit('mike', 1000000);
+
+/*
 select * from owns where login = 'mike';
-
-
-
+exec sale('mike', 'RE', 50);
+select * from owns;
+select * from customer;
 
 
 /*
--- LATESTPRICE is a view that displays all funds' latest prices.
-CREATE OR REPLACE VIEW LATESTPRICE
-AS
-	SELECT b.symbol, b.price, b.p_date
-	FROM LASTUPDATE a JOIN CLOSINGPRICE b
-	ON b.symbol = a.symbol AND b.p_date = a.l_date;
+
 
 -- funds_in_range prints out all current fund prices within a given range.
 CREATE OR REPLACE PROCEDURE funds_in_range(lo_limit IN float DEFAULT 0, hi_limit IN float DEFAULT 99999999)
@@ -548,5 +590,38 @@ select * from owns where login = 'mike';
 PROMPT :::TESTING funds_in_range PROCEDURE:::;
 EXEC funds_in_range;
 EXEC funds_in_range(100, 1000);
+
+
+-- ON_BUY, upon a purchase, decrements the seller's shares by that amount and increases the seller's balance by the value of the sold shares.
+
+CREATE OR REPLACE TRIGGER ON_BUY
+AFTER 
+INSERT on TRXLOG
+FOR EACH ROW
+WHEN (new.action = 'buy')
+DECLARE 
+    cur_balance number;
+    price_shares number;
+    check_shares number;
+BEGIN   
+    SELECT balance into cur_balance 
+    from CUSTOMER
+    WHERE (:new.login = login);    
+    
+    price_shares:= share_prices(:new.symbol, :new.num_shares, :new.t_date);
+    IF (cur_balance >= :new.num_shares)
+    THEN
+    UPDATE CUSTOMER set balance = balance - price_shares WHERE login = :new.login;
+       check_shares := has_shares(:new.login, :new.symbol);
+       IF (check_shares =1)
+       THEN
+       UPDATE OWNS set shares = shares + :new.num_shares WHERE login = :new.login AND symbol = :new.symbol;    
+       ELSE
+       INSERT INTO OWNS values(:new.login, :new.symbol, :new.num_shares);
+       END IF;
+    END IF;
+END;
+/
+
 
 */
