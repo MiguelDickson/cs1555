@@ -198,7 +198,7 @@ AS
 --LATESTPRICE is a view that displays all funds' latest prices.
 CREATE OR REPLACE VIEW LATESTPRICE
 AS
-	SELECT b.symbol, b.price AS l_price, b.p_date
+	SELECT b.symbol, b.price, b.p_date
 	FROM LASTUPDATE a JOIN CLOSINGPRICE b
 	ON b.symbol = a.symbol AND b.p_date = a.l_date;
     
@@ -489,11 +489,11 @@ BEGIN
         FROM CUSTOMER
         WHERE login = logi;
         
-        SELECT l_price INTO curr_price
+        SELECT price INTO curr_price
         FROM LATESTPRICE
         WHERE symbol = symb;
         
-        price_shares := curr_price * numshare;
+        price_shares := price * numshare;
         
         IF curr_balance < price_shares
             THEN
@@ -513,7 +513,7 @@ END;
 
 
 --Testing:
-/*
+
 exec deposit('mike', 1000000);
 
 /*
