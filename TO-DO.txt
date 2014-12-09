@@ -1,0 +1,74 @@
+TO-DO LIST:
+
+
+EARLY TEST-RUN:
+
+    1) U1 and U2 login
+    --2) U1 and U2 deposit some money
+    3) U2 logs out
+    4) U1 logs in again on diff. terminal
+    5) U1 sells particular stock, U1 deposits (as close to same time as possible)
+    6) Admin logins in
+    7) U1 buys particular stock / admin changes price of that stock
+    8) Admin adds U3
+    9) Admin logs out
+    10) U3 logs in
+    11) U1, U3 log-out.
+
+SQL: 
+    depositing: (1-2)
+        deposit comes in (some amount)
+        check whether (some amount) allocation works
+        (precalculate all the buys)
+    
+        if so (either with amount or adj_amount)
+        update customer set balance -= amount / adj_amoun
+        TRIGGER
+        when new.balance < old.balance
+        adjust owns according to allocation * (diff old.balance - new.balance)
+        
+    TRXLOG:
+        make sure all actions/procedures, etc. appropriately register in TRXLOG (2)
+
+JAVA:
+    
+main_menu (0)
+    1) login; go to user_menu (0)
+    2) login; go to admin_menu (0)
+    3) quit (0)
+     
+user_menu (0)
+    1) logout; go to main_menu (0)
+    2) browse mutual funds;  
+            check category of their choice (1)
+            ask for fund to be sorted on highest price for a given day (2)
+                if that day exists; if not, the day before it; if not - ERROR
+            alphabetically by fund name (1)
+    3) find mutual fund; 
+            up to two keywords; return products that contain ALL keywords  (2) -regex stuff
+    4) deposit money/invest (1) - CONCURRENCY
+            submit an amount (1) - CONCURRENCY
+    5) sell shares 
+            symbol (1) - CONCURRENCY; number of shares (1) - CONCURRENCY
+    6) buy shares
+            symbol / number of shares (1) - CONCURRENCY
+            symbol / amount of money (1) - CONCURRENCY
+    7) change allocation -
+            (insert new, consistent allocation into prefers and into allocation #) 1/2 - CONCURRENCY
+    8) generate performance report (3)
+            take current amounts of stocks, calculate current worth
+            take current amounts of stocks, walk backwards through trxlog, calculate price paid
+            difference is profitability
+
+admin_menu  
+    1) logout; go to main_menu (0)
+    2) create new_customer [ADD IS_ADMIN TO FIELD]
+            name, email, login, pw, is-ADMIN (0-1)
+    3) update price quotes - CONCURRENCY 
+    4) add new mutual fund (current price - set to latest date) (1-2)
+    5) manually update date (set latest date as what user sets IFF after last(mutual_date)) (1) 
+    6) generate statistics (3)
+        past x months (highest count of shares sold)
+        most investors
+    
+USE CONCURRENCY CONTROLS

@@ -468,7 +468,7 @@ END;
 /
 
 
---
+--set # of shares to purchase
 CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number)
 AS
     has_shares number;
