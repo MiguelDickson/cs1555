@@ -309,6 +309,7 @@ public class Team10Project
                                                       resultSet = stmt.executeQuery();
                                                       if(!resultSet.isBeforeFirst()) //Check whether that admin exists already
                                                       {
+                                                        
                                                          stmt = connection.prepareStatement("INSERT INTO CUSTOMER VALUES(?,?,?,?,?)");
                                                          stmt.setString(1, username);
                                                          stmt.setString(2, name);
@@ -421,6 +422,8 @@ public class Team10Project
                                                 {
                                                  resultSet2.next();
                                                  latestdate = resultSet2.getDate(1);
+                                                 connection.setAutoCommit(false);
+                                                 connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
                                                  stmt = connection.prepareStatement("INSERT INTO MUTUALFUND VALUES(?,?,?,?,?)");
                                                  stmt.setString(1, mfsymbol);
                                                  stmt.setString(2, mfname);
@@ -428,6 +431,9 @@ public class Team10Project
                                                  stmt.setString(4, mfcategory);
                                                  stmt.setDate(5, latestdate);
                                                  stmt.executeUpdate();
+                                                 connection.commit();
+                                                 connection.setAutoCommit(true);
+                                                 connection.setTransactionIsolation(Connection.READ_COMMITTED);
                                                  resultSet.close();
                                                  resultSet2.close();
                                                                                                                                                  
