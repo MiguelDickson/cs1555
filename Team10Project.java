@@ -58,7 +58,234 @@ public class Team10Project
     System.out.println("Thanks for using BetterFutures!");
   }
   
+  
+  void user_menu()
+  {
+       String pause;
+       boolean quit = false;
+       int option=-1;
+       while (option!=0)
+       {
+           final String ANSI_CLS = "\u001b[2J";
+           final String ANSI_HOME = "\u001b[H";
+           System.out.print(ANSI_CLS + ANSI_HOME);
+           System.out.flush();
+           System.out.println("Welcome to the user interface!");
+           System.out.println("Your options:");
+           System.out.println("0: Logout");
+           //System.out.println("1: ");
+           //System.out.println("2: ");
+           //System.out.println("3: ");
+           //System.out.println("4: ");
+           Scanner reader = new Scanner(System.in);
+          // reader.nextLine();
+           option = reader.nextInt();
+           switch (option)
+           { 
+                case 0:
+                default:
+                break;
+           }
+       }
+  }
     
+  void admin_menu()
+  {
+       String pause;
+       boolean quit = false;
+       boolean admin = false;
+       String make_admin;
+       String username;
+       String password;
+       String email;
+       String address;
+       String name;
+       int option=-1;
+       final String ANSI_CLS = "\u001b[2J";
+       final String ANSI_HOME = "\u001b[H";
+       
+       while (option!=0)
+       {
+           System.out.print(ANSI_CLS + ANSI_HOME);
+           System.out.flush();
+           System.out.println("Welcome to the administrator interface!");
+           System.out.println("Your options:");
+           System.out.println("0: Logout");
+           System.out.println("1: Add new user");
+           //System.out.println("2: Update share quote");
+           //System.out.println("3: Add a new fund");
+           //System.out.println("4: Update date and time");
+           Scanner reader = new Scanner(System.in);
+          // reader.nextLine();
+           option = reader.nextInt();
+           switch (option)
+           { 
+           
+              case 1:
+                  try{
+                       while (quit == false)
+                        {                   
+                          System.out.println("Please enter the new user's login name (No more than 10 characters!) [Type QUIT to quit]:");
+                          username = reader.nextLine();
+                          if (!username.equals("QUIT") || username.length() < 10)
+                          {
+                             System.out.println("Please enter the new user's password (No more than 10 characters!) [Type QUIT to quit]:");
+                             password = reader.nextLine();
+                             if (!password.equals("QUIT") || password.length() < 10)
+                             {
+                                System.out.println("Please enter the new user's email (No more than 40 characters!) [Type QUIT to quit]:");
+                                email = reader.nextLine();
+                                if (!email.equals("QUIT") || email.length() < 40)
+                                {
+                                    System.out.println("Please enter the new user's address (No more than 30 characters!) [Type QUIT to quit]:");
+                                    address = reader.nextLine();
+                                        if (!address.equals("QUIT") || address.length() < 30)
+                                        {
+                                            System.out.println("Please enter the new user's name (No more than 20 characters!) [Type QUIT to quit]:");
+                                            name = reader.nextLine();
+                                            if (!name.equals("QUIT") || name.length() < 20)
+                                            {
+                                                System.out.println("Make this user an admin? Type 'YES' if so (all other answers are no) [Type QUIT to quit]:");
+                                                make_admin = reader.nextLine();
+                                                if (!make_admin.equals("QUIT"))
+                                                {
+                                                    if (make_admin.equals("YES"))
+                                                    {
+                                                      PreparedStatement stmt = connection.prepareStatement("SELECT * FROM ADMINISTRATOR WHERE LOGIN = ?"); 
+                                                      stmt.setString(1, username);
+                                                      resultSet = stmt.executeQuery();
+                                                      if(!resultSet.isBeforeFirst()) //Check whether that admin exists already
+                                                      {
+                                                         resultSet.close();
+                                                         stmt = connection.prepareStatement("INSERT INTO ADMINISTRATOR VALUES(?,?,?,?,?)");
+                                                         stmt.setString(1, username);
+                                                         stmt.setString(2, name);
+                                                         stmt.setString(3, email);
+                                                         stmt.setString(4, address);
+                                                         stmt.setString(5, password);
+                                                         stmt.executeUpdate();
+                                                         
+                                                         stmt = connection.prepareStatement("INSERT INTO CUSTOMER VALUES(?,?,?,?,?)");
+                                                         stmt.setString(1, username);
+                                                         stmt.setString(2, name);
+                                                         stmt.setString(3, email);
+                                                         stmt.setString(4, address);
+                                                         stmt.setString(5, password);
+                                                         stmt.setInt(6, 0);
+                                                         stmt.executeUpdate();
+                                                         
+                                                         System.out.println("User succesfully added as administrator and customer!");
+                                                         //This is basically a pause
+                                                         quit = false;
+                                                         pause = reader.next();
+                                                         //resultSet.close();  
+                                                      }
+                                                      else
+                                                      {
+                                                        System.out.println("Sorry, an administrator with this login already exists!");
+                                                        resultSet.close(); 
+                                                        //user_menu();
+                                                        //This is basically a pause
+                                                        pause = reader.next();
+                                                                         
+                                                      }
+                                                    }
+                                                    else
+                                                    {
+                                                      PreparedStatement stmt = connection.prepareStatement("SELECT * FROM CUSTOMER WHERE LOGIN = ?"); 
+                                                      stmt.setString(1, username);
+                                                      resultSet = stmt.executeQuery();
+                                                      if(!resultSet.isBeforeFirst()) //Check whether that admin exists already
+                                                      {
+                                                         stmt = connection.prepareStatement("INSERT INTO CUSTOMER VALUES(?,?,?,?,?)");
+                                                         stmt.setString(1, username);
+                                                         stmt.setString(2, name);
+                                                         stmt.setString(3, email);
+                                                         stmt.setString(4, address);
+                                                         stmt.setString(5, password);
+                                                         stmt.setInt(6, 0);
+                                                         stmt.executeUpdate();
+                                                         
+                                                         System.out.println("User succesfully added as customer!");
+                                                         //This is basically a pause
+                                                         quit = false;
+                                                         pause = reader.next();
+                                                         //resultSet.close();  
+                                                      }
+                                                      else
+                                                      {
+                                                        System.out.println("Sorry, a user with this login already exists!");
+                                                        resultSet.close(); 
+                                                        //user_menu();
+                                                        //This is basically a pause
+                                                        pause = reader.next();
+                                                                         
+                                                      }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    break;
+                                                
+                                                }
+                                            }
+                                            else
+                                            {
+                                            System.out.println("Sorry, invalid name!");
+                                            //This is basically a pause
+                                            pause = reader.next();          
+                                            
+                                            }
+                                        }
+                                        else
+                                        {
+                                        System.out.println("Sorry, invalid address!");
+                                        //This is basically a pause
+                                        pause = reader.next();  
+                                        }
+                                }
+                                else
+                                {
+                                   System.out.println("Sorry, invalid email!");
+                                   //This is basically a pause
+                                   pause = reader.next();                                         
+                                }
+                             }
+                             else
+                             {
+                                System.out.println("Sorry, invalid password!");
+                                //This is basically a pause
+                                pause = reader.next();                                         
+                             }
+                             
+                          }
+                          else
+                          {
+                                System.out.println("Sorry, invalid username!");
+                                //This is basically a pause
+                                pause = reader.next();                                         
+                          }
+                      }
+                   }
+                   catch(Exception Ex)
+                   {
+                    System.out.println("Error with inserting on customer or admin table.  Machine Error: " + Ex.toString());
+                   }
+                   break;   
+                     
+             case 2:
+             case 0:
+             default:
+             break;
+             
+           }                     
+      } 
+       
+   }    
+       
+       
+       
+       
   
   
   
@@ -83,6 +310,7 @@ public class Team10Project
         System.out.println("1: Login as user");
         System.out.println("2: Login as administrator");
         Scanner reader = new Scanner(System.in);
+        //reader.nextLine();
         option = reader.nextInt();
         switch (option)
         { case 1:
@@ -140,10 +368,13 @@ public class Team10Project
                                  else
                                     {
                                     System.out.println("Go to user menu! Should be successful login!");
-                                    //user_menu();
+                                    resultSet.close();  
+                                    option = -1;
+                                    user_menu();
+                                    quit = true;
                                     //This is basically a pause
-                                    pause = reader.next();
-                                    resultSet.close();                   
+                                    //pause = reader.next();
+                                                      
                                     }
                                  }
                                  catch(Exception Ex)  //What to do with any exceptions
@@ -221,10 +452,13 @@ public class Team10Project
                                  else
                                     {
                                     System.out.println("Go to administrator menu! Should be successful login!");
-                                    //admin_menu();
+                                    resultSet.close(); 
+                                    admin_menu();
+                                    option = -1;
                                     //This is basically a pause
-                                    pause = reader.next();
-                                    resultSet.close();                   
+                                    //pause = reader.next();
+     
+                                    break;
                                     }
                                  }
                                  catch(Exception Ex)  //What to do with any exceptions

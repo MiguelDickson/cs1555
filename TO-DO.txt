@@ -32,13 +32,13 @@ SQL:
 
 JAVA:
     
-main_menu (0)
-    1) login; go to user_menu (0)
-    2) login; go to admin_menu (0)
-    3) quit (0)
+main_menu (0)   CHECK
+    1) login (CHECK); go to user_menu (0) 
+    2) login (CHECK); go to admin_menu (0) CHECK 
+    3) quit (0) CHECK
      
-user_menu (0)
-    1) logout; go to main_menu (0)
+user_menu (0) CHECK
+    1) logout; go to main_menu (0) CHECK
     2) browse mutual funds;  
             check category of their choice (1)
             ask for fund to be sorted on highest price for a given day (2)
@@ -61,9 +61,9 @@ user_menu (0)
             difference is profitability
 
 admin_menu  
-    1) logout; go to main_menu (0)
-    2) create new_customer [ADD IS_ADMIN TO FIELD]
-            name, email, login, pw, is-ADMIN (0-1)
+    1) logout; go to main_menu (0) CHECK
+    2) create new_customer  CHECK
+            name, email, login, pw, is-ADMIN (0-1) CHECK
     3) update price quotes - CONCURRENCY 
     4) add new mutual fund (current price - set to latest date) (1-2)
     5) manually update date (set latest date as what user sets IFF after last(mutual_date)) (1) 
