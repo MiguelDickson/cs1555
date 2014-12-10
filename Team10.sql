@@ -376,9 +376,11 @@ BEGIN
         -- update customer set balance -= amount / adj_amoun
 	
         before_buy := old_balance + amoun;
-		after_buy := before_buy;
+		UPDATE CUSTOMER set balance = before_buy WHERE login = logi; -- This should not trigger anything, as it is an increase in balance.
 		
-		shares_not_purchased := 0;
+		after_buy := before_buy; -- Will be decremented by the total price of all shares.
+		
+		shares_not_purchased := 0; -- Flag for whether or not a share was too expensive to be obtained
 		recent_alloc := get_last_allocation(logi);
 		numb_prefs:= get_number_preferences(recent_alloc);
 		
@@ -404,10 +406,8 @@ BEGIN
 		IF (shares_not_purchased = 1)
 			THEN
 			dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
-			UPDATE CUSTOMER set balance = before_buy;
 		ELSE
-			dbms_output.put_line('Successfully bought shares!');
-			UPDATE CUSTOMER set balance = after_buy;
+			UPDATE CUSTOMER set balance = after_buy WHERE login = logi;
 		END IF;
 		
     END IF;
@@ -427,57 +427,28 @@ DECLARE
     money_alloc number;
     shares_bought number;
     numb_prefs number;
-    cur_balance number;
     price_shares number;
-    shares_not_purchased number;
     owned_shares number;
 BEGIN
     recent_alloc:= get_last_allocation(:new.login);
     numb_prefs:= get_number_preferences(recent_alloc);
     
     for i in 1..numb_prefs LOOP
-        money_alloc := get_n_preference(i, recent_alloc) * :new.balance;
-        --dbms_output.put_line('This amount of the current balance of the allocated amount is allocated:');
-        --dbms_output.put_line(money_alloc);
-        shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
-        IF (shares_bought = 0)
-        THEN
-        shares_not_purchased:=1;
-        END IF;        
-        --dbms_output.put_line('This number of shares were purchased:');
-        --dbms_output.put_line(shares_bought);
-        cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
-        --dbms_output.put_line('Balance is now:');
-        --dbms_output.put_line(cur_balance);    
-    END LOOP; 
-    
-        --dbms_output.put_line('End balance is:');
-        --dbms_output.put_line(cur_balance);    
-        
-    IF (shares_not_purchased = 1)
-        THEN
-        dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
-        --UPDATE CUSTOMER set balance = balance + :new.amount;
-    ELSE
-        cur_balance:= :new.balance;
-        
-        for i in 1..numb_prefs LOOP
-            owned_shares := has_shares(:new.login, get_n_prefsymbol(i,recent_alloc));
-            money_alloc := get_n_preference(i, recent_alloc) * :new.balance;
-            shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
-            IF owned_shares = 1
-                THEN
-                UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol = get_n_prefsymbol(i,recent_alloc);  
-                cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
-                ELSE
-                INSERT into OWNS values(:new.login, get_n_prefsymbol(i,recent_alloc), shares_bought);
-                cur_balance:= cur_balance - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
-            END IF;
-        end loop;
-        
-        UPDATE CUSTOMER set balance = cur_balance;
-        
-     END IF;           
+		owned_shares := has_shares(:new.login, get_n_prefsymbol(i,recent_alloc));
+		-- dbms_output.put_line(i || '. owned_shares: ' || owned_shares);
+		money_alloc := get_n_preference(i, recent_alloc) * :old.balance;
+		-- dbms_output.put_line(i || '. money_alloc: ' || money_alloc);
+		-- dbms_output.put_line(i || '. get_n_preference(i, recent_alloc): ' || get_n_preference(i, recent_alloc));
+		-- dbms_output.put_line(i || '. :old.balance: ' || :old.balance);
+		shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
+		IF owned_shares = 1
+			THEN
+			UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol = get_n_prefsymbol(i,recent_alloc);
+			ELSE
+			INSERT into OWNS values(:new.login, get_n_prefsymbol(i,recent_alloc), shares_bought);
+		END IF;
+		dbms_output.put_line('Bought ' || shares_bought || ' shares of ' || get_n_prefsymbol(i,recent_alloc) || '.');
+	end loop;
 END;
 /
 
@@ -508,62 +479,53 @@ END;
 
 
 --set # of shares to purchase
--- CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number)
--- AS
-    -- has_shares number;
-    -- curr_price number;
-    -- curr_balance number;
-    -- price_shares number;
--- BEGIN
-    -- execute immediate 'ALTER TRIGGER on_deposit DISABLE';
-    -- IF numshare < 0
-        -- THEN
-        -- dbms_output.put_line('Cannot buy negative shares bro!!!');
-    -- ELSE
-        -- SELECT shares INTO has_shares
-        -- FROM OWNS
-        -- WHERE login = logi AND symbol = symb; 
+CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number)
+AS
+    has_shares number;
+    curr_price number;
+    curr_balance number;
+    price_shares number;
+BEGIN
+    execute immediate 'ALTER TRIGGER on_deposit DISABLE';
+    IF numshare < 0
+        THEN
+        dbms_output.put_line('Cannot buy negative shares bro!!!');
+    ELSE
+        SELECT shares INTO has_shares
+        FROM OWNS
+        WHERE login = logi AND symbol = symb; 
         
-        -- SELECT balance INTO curr_balance
-        -- FROM CUSTOMER
-        -- WHERE login = logi;
+        SELECT balance INTO curr_balance
+        FROM CUSTOMER
+        WHERE login = logi;
         
-        -- SELECT price INTO curr_price
-        -- FROM LATESTPRICE
-        -- WHERE symbol = symb;
+        SELECT price INTO curr_price
+        FROM LATESTPRICE
+        WHERE symbol = symb;
         
-        -- price_shares := price * numshare;
+        price_shares := curr_price * numshare;
         
-        -- IF curr_balance < price_shares
-            -- THEN
-            -- dbms_output.put_line('Cannot sell more shares than you have, bro!!');
-        -- ELSE
-            -- UPDATE OWNS set shares = has_shares + numshare WHERE login = logi AND symbol = symb;
-            -- UPDATE CUSTOMER set balance = balance - price_shares WHERE login = logi;  
+        IF curr_balance < price_shares
+            THEN
+            dbms_output.put_line('Cannot sell more shares than you have, bro!!');
+        ELSE
+            UPDATE OWNS set shares = has_shares + numshare WHERE login = logi AND symbol = symb;
+            UPDATE CUSTOMER set balance = balance - price_shares WHERE login = logi;  
             
-        -- END IF;
-    -- END IF;
-    -- execute immediate 'ALTER TRIGGER on_deposit ENABLE';
--- END;
--- /
-
-
-
-
+        END IF;
+    END IF;
+    execute immediate 'ALTER TRIGGER on_deposit ENABLE';
+END;
+/
 
 --Testing:
+exec deposit('mike', 100);
 
-exec deposit('mike', 1000000);
-
-/*
 select * from owns where login = 'mike';
 exec sale('mike', 'RE', 50);
 select * from owns;
 select * from customer;
-
-
-/*
-
+exec purchase1('mike', 'RE', 1);
 
 -- funds_in_range prints out all current fund prices within a given range.
 CREATE OR REPLACE PROCEDURE funds_in_range(lo_limit IN float DEFAULT 0, hi_limit IN float DEFAULT 99999999)
@@ -580,6 +542,8 @@ BEGIN
 	END LOOP;
 END;
 /
+
+/*
 
 --TESTING SALE TRANSACTION
 PROMPT :::TESTING SALE TRANSACTION:::;
