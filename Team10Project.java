@@ -19,6 +19,7 @@ public class Team10Project
   private Statement statement; //used to create an instance of the connection
   private ResultSet resultSet; //used to hold the result of your query (if one
                                // exists)
+  private ResultSet resultSet2;
   private String query;  //this will hold the query we are using
   private String username, password;
 
@@ -82,6 +83,7 @@ public class Team10Project
            Scanner reader = new Scanner(System.in);
           // reader.nextLine();
            option = reader.nextInt();
+           pause = reader.nextLine();
            switch (option)
            { 
                 case 1:
@@ -120,7 +122,7 @@ public class Team10Project
                              System.out.println("\n Results above. Type anything and hit Enter to continue!");
                              //This is basically a pause
                              quit = false;
-                             pause = reader.next();
+                             pause = reader.nextLine();
                              //resultSet.close();  
                              
                            }
@@ -130,7 +132,7 @@ public class Team10Project
                              System.out.println("Type anything and hit Enter to continue!");
                              //This is basically a pause
                              quit = false;
-                             pause = reader.next();
+                             pause = reader.nextLine();
                              //resultSet.close();                               
                            }
                          }
@@ -175,6 +177,7 @@ public class Team10Project
            Scanner reader = new Scanner(System.in);
           // reader.nextLine();
            option = reader.nextInt();
+         //  pause = reader.nextLine();
            switch (option)
            { 
                 case 1:
@@ -190,12 +193,23 @@ public class Team10Project
        String pause;
        boolean quit = false;
        boolean admin = false;
+       //For new users
        String make_admin;
        String username;
        String password;
        String email;
        String address;
        String name;
+       
+       //For new mutualfund
+       String mfsymbol;
+       String mfname;
+       String mfdescription;
+       String mfcategory; 
+       Date latestdate;
+
+       
+       
        int option=-1;
        final String ANSI_CLS = "\u001b[2J";
        final String ANSI_HOME = "\u001b[H";
@@ -209,37 +223,39 @@ public class Team10Project
            System.out.println("0: Logout");
            System.out.println("1: Add new user");
            //System.out.println("2: Update share quote");
-           //System.out.println("3: Add a new fund");
+           System.out.println("3: Add a new fund");
            //System.out.println("4: Update date and time");
            Scanner reader = new Scanner(System.in);
           // reader.nextLine();
            option = reader.nextInt();
+           pause = reader.nextLine();
            switch (option)
            { 
            
               case 1:
+                  quit = false;
                   try{
                        while (quit == false)
                         {                   
                           System.out.println("Please enter the new user's login name (No more than 10 characters!) [Type QUIT to quit]:");
                           username = reader.nextLine();
-                          if (!username.equals("QUIT") || username.length() < 10)
+                          if (!username.equals("QUIT") && username.length() < 10)
                           {
                              System.out.println("Please enter the new user's password (No more than 10 characters!) [Type QUIT to quit]:");
                              password = reader.nextLine();
-                             if (!password.equals("QUIT") || password.length() < 10)
+                             if (!password.equals("QUIT") && password.length() < 10)
                              {
                                 System.out.println("Please enter the new user's email (No more than 40 characters!) [Type QUIT to quit]:");
                                 email = reader.nextLine();
-                                if (!email.equals("QUIT") || email.length() < 40)
+                                if (!email.equals("QUIT") && email.length() < 40)
                                 {
                                     System.out.println("Please enter the new user's address (No more than 30 characters!) [Type QUIT to quit]:");
                                     address = reader.nextLine();
-                                        if (!address.equals("QUIT") || address.length() < 30)
+                                        if (!address.equals("QUIT") && address.length() < 30)
                                         {
                                             System.out.println("Please enter the new user's name (No more than 20 characters!) [Type QUIT to quit]:");
                                             name = reader.nextLine();
-                                            if (!name.equals("QUIT") || name.length() < 20)
+                                            if (!name.equals("QUIT") && name.length() < 20)
                                             {
                                                 System.out.println("Make this user an admin? Type 'YES' if so (all other answers are no) [Type QUIT to quit]:");
                                                 make_admin = reader.nextLine();
@@ -273,7 +289,7 @@ public class Team10Project
                                                          System.out.println("User succesfully added as administrator and customer!");
                                                          //This is basically a pause
                                                          quit = false;
-                                                         pause = reader.next();
+                                                         pause = reader.nextLine();
                                                          //resultSet.close();  
                                                       }
                                                       else
@@ -282,7 +298,7 @@ public class Team10Project
                                                         resultSet.close(); 
                                                         //user_menu();
                                                         //This is basically a pause
-                                                        pause = reader.next();
+                                                        pause = reader.nextLine();
                                                                          
                                                       }
                                                     }
@@ -305,7 +321,7 @@ public class Team10Project
                                                          System.out.println("User succesfully added as customer!");
                                                          //This is basically a pause
                                                          quit = false;
-                                                         pause = reader.next();
+                                                         pause = reader.nextLine();
                                                          //resultSet.close();  
                                                       }
                                                       else
@@ -314,7 +330,7 @@ public class Team10Project
                                                         resultSet.close(); 
                                                         //user_menu();
                                                         //This is basically a pause
-                                                        pause = reader.next();
+                                                        pause = reader.nextLine();
                                                                          
                                                       }
                                                     }
@@ -329,7 +345,7 @@ public class Team10Project
                                             {
                                             System.out.println("Sorry, invalid name!");
                                             //This is basically a pause
-                                            pause = reader.next();          
+                                            pause = reader.nextLine();          
                                             
                                             }
                                         }
@@ -337,21 +353,21 @@ public class Team10Project
                                         {
                                         System.out.println("Sorry, invalid address!");
                                         //This is basically a pause
-                                        pause = reader.next();  
+                                        pause = reader.nextLine();  
                                         }
                                 }
                                 else
                                 {
                                    System.out.println("Sorry, invalid email!");
                                    //This is basically a pause
-                                   pause = reader.next();                                         
+                                   pause = reader.nextLine();                                         
                                 }
                              }
                              else
                              {
                                 System.out.println("Sorry, invalid password!");
                                 //This is basically a pause
-                                pause = reader.next();                                         
+                                pause = reader.nextLine();                                         
                              }
                              
                           }
@@ -359,7 +375,7 @@ public class Team10Project
                           {
                                 System.out.println("Sorry, invalid username!");
                                 //This is basically a pause
-                                pause = reader.next();                                         
+                                pause = reader.nextLine();                                         
                           }
                       }
                    }
@@ -372,14 +388,124 @@ public class Team10Project
              case 2:
              
              case 3:
-             
-             
-             
-             
-             
-             
-             
-             
+                 quit = false;
+                 try{
+                    while (quit == false)
+                        {                   
+                          System.out.println("Please enter the new mutual fund's symbol (No more than 20 characters!) [Type QUIT to quit]:");
+                          mfsymbol = reader.nextLine();
+                          if (!mfsymbol.equals("QUIT") && mfsymbol.length() < 20)
+                          {
+                             System.out.println("Please enter the new mutual fund's name (No more than 30 characters!) [Type QUIT to quit]:");
+                             mfname = reader.nextLine();
+                             if (!mfname.equals("QUIT") && mfname.length() < 30)
+                             {
+                                System.out.println("Please enter the new mutual fund's description (No more than 100 characters!) [Type QUIT to quit]:");
+                                mfdescription = reader.nextLine();
+                                if (!mfdescription.equals("QUIT") && mfdescription.length() < 100)
+                                {
+                                    System.out.println("Please enter the new mutual fund's category (No more than 10 characters!) [Type QUIT to quit]:");
+                                    mfcategory = reader.nextLine();
+                                        if (!mfcategory.equals("QUIT") && mfcategory.length() < 30)
+                                        {
+                                          PreparedStatement stmt = connection.prepareStatement("SELECT * FROM MUTUALFUND WHERE SYMBOL = ?"); 
+                                          stmt.setString(1, mfsymbol);
+                                          resultSet = stmt.executeQuery();
+                                           if(!resultSet.isBeforeFirst()) //Check whether that admin exists already
+                                           {
+                                             resultSet.close();
+                                             
+                                             PreparedStatement pulldate = connection.prepareStatement("SELECT * FROM MUTUALDATE ORDER BY C_DATE DESC");
+                                             resultSet2 = pulldate.executeQuery();
+                                               if (resultSet2.isBeforeFirst()) 
+                                                {
+                                                 resultSet2.next();
+                                                 latestdate = resultSet2.getDate(1);
+                                                 stmt = connection.prepareStatement("INSERT INTO MUTUALFUND VALUES(?,?,?,?,?)");
+                                                 stmt.setString(1, mfsymbol);
+                                                 stmt.setString(2, mfname);
+                                                 stmt.setString(3, mfdescription);
+                                                 stmt.setString(4, mfcategory);
+                                                 stmt.setDate(5, latestdate);
+                                                 stmt.executeUpdate();
+                                                 resultSet.close();
+                                                 resultSet2.close();
+                                                                                                                                                 
+                                                 System.out.println("Mutual fund succesfully created! Type and enter anything to continue!");
+                                                 //This is basically a pause
+                                                 quit = true;
+                                                 pause = reader.nextLine();
+                                                 //resultSet.close();  
+                                                }
+                                                else
+                                                {
+                                                resultSet2.close();
+                                                resultSet.close();
+                                                System.out.println("No valid date entered in the system to create this mutual fund!");
+                                                }
+                                            
+                                           }
+                                           else
+                                           {
+                                            System.out.println("Sorry, a mutual fund with this symbol already exists!");
+                                            resultSet.close(); 
+                                            //user_menu();
+                                            //This is basically a pause
+                                            pause = reader.nextLine();                                                         
+                                           }
+                                       }
+                                    else
+                                    {
+                                    if (mfcategory.equals("QUIT"))
+                                        quit = true;
+                                    else
+                                    {
+                                        System.out.println("Sorry, invalid mutual fund category!");
+                                        //This is basically a pause
+                                        pause = reader.nextLine();   
+                                    }
+                                    }                                                                                       
+                                }
+                                else
+                                {  if (mfdescription.equals("QUIT"))
+                                        quit = true;
+                                    else{
+                                   System.out.println("Sorry, invalid mutual fund description!");
+                                   //This is basically a pause
+                                   pause = reader.nextLine();   
+                                   }
+                                }
+                             }
+                             else
+                             {  if (mfname.equals("QUIT"))
+                                        quit = true;
+                                else{
+                                System.out.println("Sorry, invalid mutual fund name!");
+                                //This is basically a pause
+                                pause = reader.nextLine();    
+                                }
+                             }
+                             
+                          }
+                          else
+                          {    if (mfsymbol.equals("QUIT"))
+                                        quit = true;
+                               else
+                               {
+                                System.out.println("Sorry, invalid mutual fund symbol!");
+                                //This is basically a pause
+                                pause = reader.nextLine();     
+                               }
+                          }
+                      }
+               
+                }
+                catch(Exception Ex)
+                {
+                 System.out.println("Error with inserting on customer or admin table.  Machine Error: " + Ex.toString());
+                }
+                break;    
+         
              case 0:
              default:
              break;
@@ -413,8 +539,10 @@ public class Team10Project
         Scanner reader = new Scanner(System.in);
         //reader.nextLine();
         option = reader.nextInt();
+        pause = reader.nextLine();
         switch (option)
         { case 1:
+               quit = false;
                try{
                     statement = connection.createStatement(); //create an instance
                     query = "SELECT * FROM CUSTOMER"; 
@@ -423,7 +551,7 @@ public class Team10Project
                     {
                         System.out.println("No customers registered in BetterFutures!");
                         //This is basically a pause
-                        pause = reader.next();
+                        pause = reader.nextLine();
                         resultSet.close();  
                     }
                     else
@@ -432,11 +560,11 @@ public class Team10Project
                         while (quit == false)
                         {                   
                           System.out.println("Please enter your login name (No more than 10 characters!) [Type QUIT to quit]:");
-                          username = reader.next();
+                          username = reader.nextLine();
                           if (!username.equals("QUIT"))
                           {
                           System.out.println("Please enter your password (No more than 20 characters!) [Type QUIT to quit]:");
-                          password = reader.next();
+                          password = reader.nextLine();
                           }
                           if (username.length() > 10 || password.length() > 20 || username.equals("QUIT") || password.equals("QUIT") )
                           {
@@ -446,7 +574,7 @@ public class Team10Project
                               {
                               System.out.println("Incorrect username/password!!");
                               //This is basically a pause
-                              pause = reader.next();
+                              pause = reader.nextLine();
                               resultSet.close();  
                               quit = false;
                               }
@@ -463,7 +591,7 @@ public class Team10Project
                                      System.out.println("Incorrect username/password!!");
                                      //This is basically a pause
                                      quit = false;
-                                     pause = reader.next();
+                                     pause = reader.nextLine();
                                      resultSet.close();  
                                     }
                                  else
@@ -474,7 +602,7 @@ public class Team10Project
                                     user_menu(username);
                                     quit = true;
                                     //This is basically a pause
-                                    //pause = reader.next();
+                                    //pause = reader.nextLine();
                                                       
                                     }
                                  }
@@ -499,6 +627,7 @@ public class Team10Project
                 break;
                 
          case 2: 
+                quit = false;
                 try{
                     statement = connection.createStatement(); //create an instance
                     query = "SELECT * FROM ADMINISTRATOR"; 
@@ -507,7 +636,7 @@ public class Team10Project
                     {
                         System.out.println("No administrator registered in BetterFutures!");
                         //This is basically a pause
-                        pause = reader.next();
+                        pause = reader.nextLine();
                         resultSet.close();  
                     }
                     else
@@ -516,11 +645,11 @@ public class Team10Project
                         while (quit == false)
                         {                   
                           System.out.println("Please enter your login name (No more than 10 characters!) [Type QUIT to quit]:");
-                          username = reader.next();
+                          username = reader.nextLine();
                           if (!username.equals("QUIT"))
                           {
                           System.out.println("Please enter your password (No more than 20 characters!) [Type QUIT to quit]:");
-                          password = reader.next();
+                          password = reader.nextLine();
                           }
                           if (username.length() > 10 || password.length() > 20 || username.equals("QUIT") || password.equals("QUIT") )
                           {
@@ -530,7 +659,7 @@ public class Team10Project
                               {
                               System.out.println("Incorrect username/password!!");
                               //This is basically a pause
-                              pause = reader.next();
+                              pause = reader.nextLine();
                               resultSet.close();  
                               quit = false;
                               }
@@ -547,7 +676,7 @@ public class Team10Project
                                      System.out.println("Incorrect username/password!!");
                                      //This is basically a pause
                                      quit = false;
-                                     pause = reader.next();
+                                     pause = reader.nextLine();
                                      resultSet.close();  
                                     }
                                  else
@@ -557,7 +686,7 @@ public class Team10Project
                                     admin_menu();
                                     option = -1;
                                     //This is basically a pause
-                                    //pause = reader.next();
+                                    //pause = reader.nextLine();
      
                                     break;
                                     }

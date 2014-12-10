@@ -33,29 +33,30 @@ SQL:
 JAVA:
     
 main_menu (0)   CHECK
-    1) login (CHECK); go to user_menu (0) 
+    0) quit (0) CHECK
+    1) login (CHECK); go to user_menu (0) CHECK
     2) login (CHECK); go to admin_menu (0) CHECK 
-    3) quit (0) CHECK
+   
      
 user_menu (0) CHECK
-    1) logout; go to main_menu (0) CHECK
-    2) browse mutual funds;  PARTIAL CHECK
+    0) logout; go to main_menu (0) CHECK
+    1) browse mutual funds;  PARTIAL CHECK
             check category of their choice (1)
             ask for fund to be sorted on highest price for a given day (2)
-                if that day exists; if not, the day before it; if not - ERROR
+                if that day exists; if not, the day before it; if not, error
             alphabetically by fund name (1) CHECK
-    3) find mutual fund; 
+    2) find mutual fund; 
             up to two keywords; return products that contain ALL keywords  (2) -regex stuff
-    4) deposit money/invest (1) - CONCURRENCY
+    3) deposit money/invest (1) - CONCURRENCY
             submit an amount (1) - CONCURRENCY
-    5) sell shares 
+    4) sell shares 
             symbol (1) - CONCURRENCY; number of shares (1) - CONCURRENCY
-    6) buy shares
+    5) buy shares
             symbol / number of shares (1) - CONCURRENCY
             symbol / amount of money (1) - CONCURRENCY
-    7) change allocation -
+    6) change allocation -
             (insert new, consistent allocation into prefers and into allocation #) 1/2 - CONCURRENCY
-    8) generate performance report (3)
+    7) generate performance report (3)
             take current amounts of stocks, calculate current worth
             take current amounts of stocks, walk backwards through trxlog, calculate price paid
             difference is profitability
@@ -65,7 +66,7 @@ admin_menu
     2) create new_customer  CHECK
             name, email, login, pw, is-ADMIN (0-1) CHECK
     3) update price quotes - CONCURRENCY 
-    4) add new mutual fund (current price - set to latest date) (1-2)
+    4) add new mutual fund (current price - set to latest date) (1-2) - CHECK
     5) manually update date (set latest date as what user sets IFF after last(mutual_date)) (1) 
     6) generate statistics (3)
         past x months (highest count of shares sold)
