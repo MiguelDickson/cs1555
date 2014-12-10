@@ -1,5 +1,9 @@
 /*
- 
+ ----------------------------------------------------------------------------------------------------
+--- Name: John Lee, Miguel Dickson (Group 10)
+--- Pitt ID: JOL59, LMD90
+---
+----------------------------------------------------------------------------------------------------
   IMPORTANT (otherwise, your code may not compile)	
   Same as using sqlplus, you NEED TO SET oracle environment variables by 
   sourcing bash.env or tcsh.env
@@ -76,7 +80,7 @@ public class Team10Project
            System.out.println("Browsing mutual funds!");
            System.out.println("Your options:");
            System.out.println("0: Logout");
-           System.out.println("1: Print all mutual funds in alphabetical order:");
+           System.out.println("3: Print all mutual funds in alphabetical order:");
            //System.out.println("2: ");
            //System.out.println("3: ");
            //System.out.println("4: ");
@@ -86,7 +90,7 @@ public class Team10Project
            pause = reader.nextLine();
            switch (option)
            { 
-                case 1:
+                case 3:
                       try{
                           PreparedStatement stmt = connection.prepareStatement("SELECT * FROM MUTUALFUND ORDER BY NAME ASC"); 
                           resultSet = stmt.executeQuery();
