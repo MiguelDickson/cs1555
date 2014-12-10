@@ -265,17 +265,17 @@ CREATE OR REPLACE FUNCTION has_shares(log_name in varchar, symb in varchar)
     RETURN number IS bool_shares number;
 num_results number;
 BEGIN
-      SELECT COUNT(*) into num_results
-      FROM OWNS
-      WHERE login = log_name AND symbol = symb;
-      IF num_results = 0 
-        THEN
-          --dbms_output.put_line(log_name || 'owns no shares of ' || symb);
-          RETURN(0);
-      ELSE
-          --dbms_output.put_line(log_name || 'owns some shares of ' || symb);  
-          RETURN(1);
-      END IF;       
+    SELECT COUNT(*) into num_results
+    FROM OWNS
+    WHERE login = log_name AND symbol = symb;
+    IF num_results = 0 
+	THEN
+        --dbms_output.put_line(log_name || 'owns no shares of ' || symb);
+        RETURN(0);
+    ELSE
+        --dbms_output.put_line(log_name || 'owns some shares of ' || symb);  
+        RETURN(1);
+    END IF;       
 END;
 /
 
@@ -364,16 +364,12 @@ AS
     owned_shares number;
 BEGIN
     IF amoun < 0
-        THEN
+	THEN
         dbms_output.put_line('Cannot deposit negative money bro!!!');
     ELSE
         SELECT balance INTO old_balance
         FROM CUSTOMER
         WHERE login = logi;
-    
-        -- (precalculate all the buys)
-        -- if so (either with amount or adj_amount)
-        -- update customer set balance -= amount / adj_amoun
 	
         before_buy := old_balance + amoun;
 		UPDATE CUSTOMER set balance = before_buy WHERE login = logi; -- This should not trigger anything, as it is an increase in balance.
@@ -404,7 +400,7 @@ BEGIN
 			--dbms_output.put_line(after_buy);    
 			
 		IF (shares_not_purchased = 1)
-			THEN
+		THEN
 			dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
 		ELSE
 			UPDATE CUSTOMER set balance = after_buy WHERE login = logi;
@@ -442,7 +438,7 @@ BEGIN
 		-- dbms_output.put_line(i || '. :old.balance: ' || :old.balance);
 		shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
 		IF owned_shares = 1
-			THEN
+		THEN
 			UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol = get_n_prefsymbol(i,recent_alloc);
 			ELSE
 			INSERT into OWNS values(:new.login, get_n_prefsymbol(i,recent_alloc), shares_bought);
@@ -458,52 +454,43 @@ AS
 BEGIN
     execute immediate 'ALTER TRIGGER on_deposit DISABLE';
     IF numshare < 0
-        THEN
+	THEN
         dbms_output.put_line('Cannot sell negative shares bro!!!');
     ELSE
         SELECT shares INTO has_shares
         FROM OWNS
         WHERE login = logi AND symbol = symb; 
 
-        IF numshare < has_shares   
-            THEN
+        IF numshare <= has_shares   
+		THEN
             dbms_output.put_line('Selling shares!');
             UPDATE OWNS set shares = has_shares - numshare WHERE login = logi AND symbol = symb;
-        ELSIF numshare = has_shares
-			THEN 
-			dbms_output.put_line('Selling all shares!');
-            DELETE FROM OWNS WHERE login = logi AND symbol = symb;
 		ELSE
             dbms_output.put_line('Cannot sell more shares than you have, bro!!');
         END IF;
+		
+		IF has_shares - numshare = 0
+		THEN
+			DELETE FROM OWNS WHERE login = logi AND symbol = symb;
+		END IF;
     END IF;
     execute immediate 'ALTER TRIGGER on_deposit ENABLE';
 END;
 /
 
 
---set # of shares to purchase
+-- purchase1 allows the user to purchase a specific number of shares, provided it is affordable.
 CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number)
 AS
-    has_shares number;
     curr_price number;
     curr_balance number;
     price_shares number;
 BEGIN
     execute immediate 'ALTER TRIGGER on_deposit DISABLE';
-    IF numshare < 0
-        THEN
-        dbms_output.put_line('Cannot buy negative shares bro!!!');
-    ELSE
-        IF -- has_shares(...) = 1
-		THEN
-			SELECT shares INTO has_shares
-			FROM OWNS
-			WHERE login = logi AND symbol = symb; 
-		ELSE
-			-- CREATE 
-		END IF;
-        
+    IF numshare <= 0
+	THEN
+        dbms_output.put_line('Must buy at least one share, bro!!!');
+    ELSE        
         SELECT balance INTO curr_balance
         FROM CUSTOMER
         WHERE login = logi;
@@ -515,13 +502,67 @@ BEGIN
         price_shares := curr_price * numshare;
         
         IF curr_balance < price_shares
-            THEN
-            dbms_output.put_line('Cannot sell more shares than you have, bro!!');
+		THEN
+            dbms_output.put_line('Cannot buy more shares than you can afford, bro!!');
         ELSE
-            UPDATE OWNS set shares = has_shares + numshare WHERE login = logi AND symbol = symb;
-            UPDATE CUSTOMER set balance = balance - price_shares WHERE login = logi;  
-            
+			IF has_shares(logi, symb) = 1
+			THEN
+				UPDATE OWNS set shares = shares + numshare WHERE login = logi AND symbol = symb;
+			ELSE
+				INSERT INTO OWNS values(logi, symb, numshare);
+			END IF;
+			UPDATE CUSTOMER set balance = curr_balance - price_shares WHERE login = logi;
         END IF;
+    END IF;
+    execute immediate 'ALTER TRIGGER on_deposit ENABLE';
+END;
+/
+
+-- purchase2 allows the user to purchase a variable number of shares based on the amount given.
+CREATE OR REPLACE PROCEDURE purchase2(logi IN varchar, symb IN varchar, amount IN number)
+AS
+    curr_price number;
+    curr_balance number;
+    shares_bought number;
+BEGIN
+    execute immediate 'ALTER TRIGGER on_deposit DISABLE';
+    IF amount <= 0
+	THEN
+        dbms_output.put_line('Must spend something, bro!!!');
+    ELSE        
+        SELECT balance INTO curr_balance
+        FROM CUSTOMER
+        WHERE login = logi;
+        
+		-- First, check if amount given is greater than balance.
+		IF curr_balance < amount
+		THEN
+			dbms_output.put_line('Cannot spend more than your current balance, bro!!');
+		ELSE
+			SELECT price INTO curr_price
+			FROM LATESTPRICE
+			WHERE symbol = symb;
+			
+			-- Calculate how many shares you can purchase.
+			shares_bought := FLOOR(amount / get_last_closing_price(symb));
+			
+			-- Check if any were bought.
+			IF shares_bought = 0
+			THEN
+				dbms_output.put_line('Cannot afford a single share, bro!!');
+			ELSE
+				IF has_shares(logi, symb) = 1
+				THEN
+					UPDATE OWNS set shares = shares + shares_bought WHERE login = logi AND symbol = symb;
+				ELSE
+					INSERT INTO OWNS values(logi, symb, shares_bought);
+				END IF;
+				-- dbms_output.put_line(curr_balance);
+				-- dbms_output.put_line(shares_bought);
+				-- dbms_output.put_line(get_last_closing_price(symb));
+				UPDATE CUSTOMER set balance = (curr_balance - (shares_bought * get_last_closing_price(symb))) WHERE login = logi;
+			END IF;
+		END IF;
     END IF;
     execute immediate 'ALTER TRIGGER on_deposit ENABLE';
 END;
@@ -535,6 +576,15 @@ exec sale('mike', 'RE', 50);
 select * from owns;
 select * from customer;
 exec purchase1('mike', 'RE', 1);
+-- Testing procedure purchase2
+-- More than balance
+exec purchase2('mike', 'RE', 99999999);
+-- Less than stock price
+exec purchase2('mike', 'RE', 1);
+-- Just right
+exec purchase2('mike', 'RE', 10000);
+-- More than just right
+exec purchase2('mike', 'RE', 251234);
 
 -- funds_in_range prints out all current fund prices within a given range.
 CREATE OR REPLACE PROCEDURE funds_in_range(lo_limit IN float DEFAULT 0, hi_limit IN float DEFAULT 99999999)
