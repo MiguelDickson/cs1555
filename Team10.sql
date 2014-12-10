@@ -59,7 +59,7 @@ CREATE TABLE CUSTOMER(
 	address		varchar(30),
 	password 	varchar(10),
 	balance 	float
-); 
+);
 
 CREATE TABLE ADMINISTRATOR(
 	CONSTRAINT ADMINISTRATOR_PK PRIMARY KEY(login) INITIALLY IMMEDIATE DEFERRABLE,
@@ -68,7 +68,7 @@ CREATE TABLE ADMINISTRATOR(
 	email 		varchar(20),
 	address		varchar(30),
 	password 	varchar(10)
-); 
+);
 
 CREATE TABLE ALLOCATION(
 	CONSTRAINT ALLOCATION_PK PRIMARY KEY(allocation_no) INITIALLY IMMEDIATE DEFERRABLE,
@@ -212,7 +212,7 @@ AS
  /* --TRIGGERS-- */
 /* ------------ */
 
--- ON_DEPOSIT, upon a purchase, adds to a user's balance, and checks to see if it is enough to fulfill the user's current allocation of buying preferences.
+-- ON_DEPOSIT, upon a decrement in balance, increases the user's stocks according to their buying preferences.
 CREATE OR REPLACE TRIGGER ON_DEPOSIT
 AFTER 
 UPDATE on CUSTOMER
@@ -248,7 +248,7 @@ BEGIN
 END;
 /
 
--- ON_SALE, upon a sale, decrements the seller's shares by that amount and increases the seller's balance by the value of the sold shares.
+-- ON_SALE, upon a decrease in shares, increases the seller's balance by the value of the sold shares.
 CREATE OR REPLACE TRIGGER ON_SALE
 AFTER 
 UPDATE on OWNS
@@ -261,7 +261,7 @@ BEGIN
     FROM LASTUPDATE
     WHERE symbol = :new.symbol;
     
-    UPDATE CUSTOMER set balance = balance + sale_proceeds(:new.symbol, (:old.shares - :new.shares), newdate) WHERE login = :new.login;
+    UPDATE CUSTOMER set balance = balance + calc_value(:new.symbol, (:old.shares - :new.shares), newdate) WHERE login = :new.login;
 END;
 /
 	
@@ -278,35 +278,19 @@ BEGIN
 END;
 /
 
--- sale_proceeds returns the proceeds of a number of shares 'shares' for a fund 'symbol' on a date 'sell_date'.
-CREATE OR REPLACE FUNCTION sale_proceeds(sym in varchar, shares in number, sell_date date)
+-- calc_value returns the value of a number of shares 'shares' for a fund 'symbol' on a date 'sell_date'.
+CREATE OR REPLACE FUNCTION calc_value(sym in varchar, shares in number, c_date date)
     RETURN number IS proceeds number;
-sale_price number;
+c_price number;
 BEGIN
-    SELECT price INTO sale_price
+    SELECT price INTO c_price
     FROM CLOSINGPRICE
-    WHERE p_date = sell_date AND symbol = sym;
+    WHERE p_date = c_date AND symbol = sym;
     
-    proceeds := sale_price * shares;
+    proceeds := c_price * shares;
     --dbms_output.put_line(proceeds);
     RETURN(proceeds);
 END;
-/
-   
--- share_prices returns the cost of a number of shares 'shares' for a fund 'symbol' on a date 'sell_date'.
-CREATE OR REPLACE FUNCTION share_prices(sym in varchar, shares in number, buy_date date)
-    RETURN number IS cost number;
-buy_price number;
-BEGIN
-    SELECT price INTO buy_price
-    FROM CLOSINGPRICE
-    WHERE p_date = buy_date AND symbol = sym;
-    
-    cost := buy_price * shares;
-    --dbms_output.put_line(cost);
-    RETURN(cost);
-END;
-/
 
 -- has_shares returns a 1 if user 'log_name' owns shares in 'symb'.
 CREATE OR REPLACE FUNCTION has_shares(log_name in varchar, symb in varchar)
@@ -456,6 +440,7 @@ BEGIN
 			dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
 		ELSE
 			UPDATE CUSTOMER set balance = after_buy WHERE login = logi;
+			add_trx(logi, symb, 'deposit', NULL);
 		END IF;
 		
     END IF;
@@ -480,6 +465,7 @@ BEGIN
 		THEN
             dbms_output.put_line('Selling shares!');
             UPDATE OWNS set shares = has_shares - numshare WHERE login = logi AND symbol = symb;
+			add_trx(logi, symb, 'sell', numshare);
 		ELSE
             dbms_output.put_line('Cannot sell more shares than you have, bro!!');
         END IF;
@@ -526,6 +512,7 @@ BEGIN
 				INSERT INTO OWNS values(logi, symb, numshare);
 			END IF;
 			UPDATE CUSTOMER set balance = curr_balance - price_shares WHERE login = logi;
+			add_trx(logi, symb, 'buy', numshare);
         END IF;
     END IF;
     execute immediate 'ALTER TRIGGER on_deposit ENABLE';
@@ -575,6 +562,7 @@ BEGIN
 				-- dbms_output.put_line(shares_bought);
 				-- dbms_output.put_line(get_last_closing_price(symb));
 				UPDATE CUSTOMER set balance = (curr_balance - (shares_bought * get_last_closing_price(symb))) WHERE login = logi;
+				add_trx(logi, symb, 'buy', shares_bought);
 			END IF;
 		END IF;
     END IF;
@@ -595,6 +583,29 @@ BEGIN
 	LOOP
 		DBMS_OUTPUT.put_line (fund_rec.symbol || ':' || chr(9) || '$' || fund_rec.price);
 	END LOOP;
+END;
+/
+
+-- add_trx adds a new transaction record to TRXLOG, taking in as few inputs as possible.
+CREATE OR REPLACE PROCEDURE add_trx(logi IN varchar, symb IN varchar, action IN varchar, num_shares IN number)
+AS
+	last_tid int;
+	curr_date date;
+	curr_price float;
+	total_amount float;
+BEGIN
+	SELECT MAX(trans_id) INTO last_tid
+	FROM TRXLOG;
+	
+	SELECT MAX(c_date) INTO curr_date
+	FROM MUTUALDATE;
+	
+	SELECT price INTO curr_price
+	FROM LATESTPRICE;
+	
+	total_amount := num_shares * curr_price;
+	
+	INSERT INTO TRXLOG values(last_tid + 1, logi, symb, curr_date, action, num_shares, curr_price, total_amount);
 END;
 /
 
