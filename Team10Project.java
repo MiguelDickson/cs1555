@@ -409,8 +409,8 @@ public class Team10Project
                               if (!mfsymbol.equals("QUIT") && mfsymbol.length() < 20)
                               {
                                     PreparedStatement stmt = connection.prepareStatement("SELECT symbol FROM MUTUALFUND WHERE SYMBOL = ?"); 
-                                    System.out.println(stmt.toString());
-                                    System.out.println(mfsymbol);
+                                    //System.out.println(stmt.toString());
+                                   // System.out.println(mfsymbol);
                                     
                                     stmt.setString(1, mfsymbol);
                                     resultSet = stmt.executeQuery();
@@ -423,7 +423,7 @@ public class Team10Project
                                     else //Check last closing price date. See if it's equal to now (latest date)
                                     { 
                                         resultSet.close();
-                                        stmt = connection.prepareStatement("SELECT p_date FROM CLOSINGPRICE WHERE SYMBOL = ? GROUP BY p_date DESC "); 
+                                        stmt = connection.prepareStatement("SELECT p_date FROM CLOSINGPRICE WHERE SYMBOL = ? ORDER BY p_date DESC"); 
                                         stmt.setString(1, mfsymbol);
                                         resultSet = stmt.executeQuery();
                                         if (!resultSet.isBeforeFirst()) //No earlier price, can definitely insert IF there's a valid date, check that next
@@ -431,7 +431,7 @@ public class Team10Project
                                             resultSet.close();
                                             System.out.println("Please enter the price for the new quote: (XX.YY format please)");
                                             newprice = reader.nextFloat();
-                                            stmt = connection.prepareStatement("INSERT INTO CLOSINGPRICE VALUES(?,?,?");
+                                            stmt = connection.prepareStatement("INSERT INTO CLOSINGPRICE VALUES(?,?,?)");
                                             stmt.setString(1, mfsymbol);
                                             stmt.setFloat(2, newprice);
                                             stmt.setDate(3, latestdate);
@@ -453,11 +453,16 @@ public class Team10Project
                                             resultSet.next();
                                             latestquotedate = resultSet.getDate(1);
                                             resultSet.close();
+                                            System.out.println("This price quote was last updated on: " + latestquotedate);
+                                            System.out.println("The current system date is: " + latestdate);
+                                          
+                                            
                                             if (!latestquotedate.equals(latestdate))
                                             {
                                                 System.out.println("Please enter the price for the new quote: (XX.YY format please)");
                                                 newprice = reader.nextFloat();
-                                                stmt = connection.prepareStatement("INSERT INTO CLOSINGPRICE VALUES(?,?,?");
+                                                pause = reader.nextLine(); 
+                                                stmt = connection.prepareStatement("INSERT INTO CLOSINGPRICE VALUES(?,?,?)");
                                                 stmt.setString(1, mfsymbol);
                                                 stmt.setFloat(2, newprice);
                                                 stmt.setDate(3, latestdate);
@@ -479,6 +484,7 @@ public class Team10Project
                                              
                                              System.out.println("This share has already been updated for the current date.");
                                              System.out.println("Update the date if you wish to enter a new price.");
+                                             System.out.println("Type anything and hit enter to continue!");
                                              quit = true;
                                               //This is basically a pause
                                              pause = reader.nextLine(); 
