@@ -59,7 +59,102 @@ public class Team10Project
   }
   
   
-  void user_menu()
+  void browse_mutual_funds()
+  {
+       String pause;
+       String line ="";
+       String date ="";
+       boolean quit = false;
+       int option=-1;
+       while (option!=0)
+       {
+           final String ANSI_CLS = "\u001b[2J";
+           final String ANSI_HOME = "\u001b[H";
+           System.out.print(ANSI_CLS + ANSI_HOME);
+           System.out.flush();
+           System.out.println("Browsing mutual funds!");
+           System.out.println("Your options:");
+           System.out.println("0: Logout");
+           System.out.println("1: Print all mutual funds in alphabetical order:");
+           //System.out.println("2: ");
+           //System.out.println("3: ");
+           //System.out.println("4: ");
+           Scanner reader = new Scanner(System.in);
+          // reader.nextLine();
+           option = reader.nextInt();
+           switch (option)
+           { 
+                case 1:
+                      try{
+                          PreparedStatement stmt = connection.prepareStatement("SELECT * FROM MUTUALFUND ORDER BY NAME ASC"); 
+                          resultSet = stmt.executeQuery();
+                          if(resultSet.isBeforeFirst()) //Check whether that admin exists already
+                          {
+                             //resultSet.close();
+                             System.out.print(ANSI_CLS + ANSI_HOME);
+                             System.out.flush();
+                             System.out.println("SYMBOL               NAME");
+                             System.out.println("-------------------- ------------------------------");
+                             System.out.println("DESCRIPTION");
+                             System.out.println("-------------");
+                             System.out.println("CATEGORY   DATE_CREATED");
+                             System.out.println("---------- ---------------");
+                             System.out.println("");
+                             while(resultSet.next())
+                             {
+                                 line = "";
+                                 date = "";
+                                 line = resultSet.getString(1) + " " + resultSet.getString(2);
+                                 System.out.println(line);
+                                 line = "";
+                                 line = resultSet.getString(3);
+                                 System.out.println(line);
+                                 line = "";
+                                 line = resultSet.getString(4);
+                                 date = (resultSet.getDate(5)).toString();
+                                 line = line + " " + date;
+                                 System.out.println(line);
+                                 System.out.println("");
+                             }
+                             resultSet.close();
+                             System.out.println("\n Results above. Type anything and hit Enter to continue!");
+                             //This is basically a pause
+                             quit = false;
+                             pause = reader.next();
+                             //resultSet.close();  
+                             
+                           }
+                           else
+                           {
+                             System.out.println("For some reason there are no mutual funds in this database."); 
+                             System.out.println("Type anything and hit Enter to continue!");
+                             //This is basically a pause
+                             quit = false;
+                             pause = reader.next();
+                             //resultSet.close();                               
+                           }
+                         }
+                         catch(Exception Ex)
+                         {
+                          System.out.println("Error with the mutualfund table.  Machine Error: " + Ex.toString());
+                         }
+                
+                case 0:
+                default:
+                break;
+           }
+       }
+  
+  
+  
+  }
+  
+  
+  
+  
+  
+  //Takes userlogin for various queries
+  void user_menu(String userlogin)
   {
        String pause;
        boolean quit = false;
@@ -73,7 +168,7 @@ public class Team10Project
            System.out.println("Welcome to the user interface!");
            System.out.println("Your options:");
            System.out.println("0: Logout");
-           //System.out.println("1: ");
+           System.out.println("1: Browse Mutual Funds:");
            //System.out.println("2: ");
            //System.out.println("3: ");
            //System.out.println("4: ");
@@ -82,7 +177,8 @@ public class Team10Project
            option = reader.nextInt();
            switch (option)
            { 
-                case 0:
+                case 1:
+                        browse_mutual_funds();
                 default:
                 break;
            }
@@ -274,6 +370,16 @@ public class Team10Project
                    break;   
                      
              case 2:
+             
+             case 3:
+             
+             
+             
+             
+             
+             
+             
+             
              case 0:
              default:
              break;
@@ -283,11 +389,6 @@ public class Team10Project
        
    }    
        
-       
-       
-       
-  
-  
   
   void display_main_menu()
   {
@@ -370,7 +471,7 @@ public class Team10Project
                                     System.out.println("Go to user menu! Should be successful login!");
                                     resultSet.close();  
                                     option = -1;
-                                    user_menu();
+                                    user_menu(username);
                                     quit = true;
                                     //This is basically a pause
                                     //pause = reader.next();

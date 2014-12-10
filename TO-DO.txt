@@ -39,11 +39,11 @@ main_menu (0)   CHECK
      
 user_menu (0) CHECK
     1) logout; go to main_menu (0) CHECK
-    2) browse mutual funds;  
+    2) browse mutual funds;  PARTIAL CHECK
             check category of their choice (1)
             ask for fund to be sorted on highest price for a given day (2)
                 if that day exists; if not, the day before it; if not - ERROR
-            alphabetically by fund name (1)
+            alphabetically by fund name (1) CHECK
     3) find mutual fund; 
             up to two keywords; return products that contain ALL keywords  (2) -regex stuff
     4) deposit money/invest (1) - CONCURRENCY
