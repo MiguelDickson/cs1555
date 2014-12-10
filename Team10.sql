@@ -465,11 +465,15 @@ BEGIN
         FROM OWNS
         WHERE login = logi AND symbol = symb; 
 
-        IF numshare <= has_shares   
+        IF numshare < has_shares   
             THEN
             dbms_output.put_line('Selling shares!');
             UPDATE OWNS set shares = has_shares - numshare WHERE login = logi AND symbol = symb;
-        ELSE
+        ELSIF numshare = has_shares
+			THEN 
+			dbms_output.put_line('Selling all shares!');
+            DELETE FROM OWNS WHERE login = logi AND symbol = symb;
+		ELSE
             dbms_output.put_line('Cannot sell more shares than you have, bro!!');
         END IF;
     END IF;
@@ -491,9 +495,14 @@ BEGIN
         THEN
         dbms_output.put_line('Cannot buy negative shares bro!!!');
     ELSE
-        SELECT shares INTO has_shares
-        FROM OWNS
-        WHERE login = logi AND symbol = symb; 
+        IF -- has_shares(...) = 1
+		THEN
+			SELECT shares INTO has_shares
+			FROM OWNS
+			WHERE login = logi AND symbol = symb; 
+		ELSE
+			-- CREATE 
+		END IF;
         
         SELECT balance INTO curr_balance
         FROM CUSTOMER
