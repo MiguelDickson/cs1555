@@ -190,6 +190,10 @@ SET SERVEROUTPUT ON;
 
 ---------------------------------------------------------------------------------------------------------------
 
+  /* --------- */
+ /* --VIEWS-- */
+/* --------- */
+
 -- LASTUPDATE is a view that displays all funds' latest dates.
 CREATE OR REPLACE VIEW LASTUPDATE
 AS
@@ -197,13 +201,74 @@ AS
 	FROM CLOSINGPRICE
 	GROUP BY symbol;
    
---LATESTPRICE is a view that displays all funds' latest prices.
+-- LATESTPRICE is a view that displays all funds' latest prices.
 CREATE OR REPLACE VIEW LATESTPRICE
 AS
 	SELECT b.symbol, b.price, b.p_date
 	FROM LASTUPDATE a JOIN CLOSINGPRICE b
 	ON b.symbol = a.symbol AND b.p_date = a.l_date;
+
+  /* ------------ */
+ /* --TRIGGERS-- */
+/* ------------ */
+
+-- ON_DEPOSIT, upon a purchase, adds to a user's balance, and checks to see if it is enough to fulfill the user's current allocation of buying preferences.
+CREATE OR REPLACE TRIGGER ON_DEPOSIT
+AFTER 
+UPDATE on CUSTOMER
+FOR EACH ROW
+WHEN (new.balance < old.balance)
+DECLARE 
+    recent_alloc number;
+    money_alloc number;
+    shares_bought number;
+    numb_prefs number;
+    price_shares number;
+    owned_shares number;
+BEGIN
+    recent_alloc:= get_last_allocation(:new.login);
+    numb_prefs:= get_number_preferences(recent_alloc);
     
+    for i in 1..numb_prefs LOOP
+		owned_shares := has_shares(:new.login, get_n_prefsymbol(i,recent_alloc));
+		-- dbms_output.put_line(i || '. owned_shares: ' || owned_shares);
+		money_alloc := get_n_preference(i, recent_alloc) * :old.balance;
+		-- dbms_output.put_line(i || '. money_alloc: ' || money_alloc);
+		-- dbms_output.put_line(i || '. get_n_preference(i, recent_alloc): ' || get_n_preference(i, recent_alloc));
+		-- dbms_output.put_line(i || '. :old.balance: ' || :old.balance);
+		shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
+		IF owned_shares = 1
+		THEN
+			UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol = get_n_prefsymbol(i,recent_alloc);
+			ELSE
+			INSERT into OWNS values(:new.login, get_n_prefsymbol(i,recent_alloc), shares_bought);
+		END IF;
+		dbms_output.put_line('Bought ' || shares_bought || ' shares of ' || get_n_prefsymbol(i,recent_alloc) || '.');
+	end loop;
+END;
+/
+
+-- ON_SALE, upon a sale, decrements the seller's shares by that amount and increases the seller's balance by the value of the sold shares.
+CREATE OR REPLACE TRIGGER ON_SALE
+AFTER 
+UPDATE on OWNS
+FOR EACH ROW
+WHEN (new.shares < old.shares)
+DECLARE
+    newdate date;
+BEGIN    
+    SELECT l_date INTO newdate
+    FROM LASTUPDATE
+    WHERE symbol = :new.symbol;
+    
+    UPDATE CUSTOMER set balance = balance + sale_proceeds(:new.symbol, (:old.shares - :new.shares), newdate) WHERE login = :new.login;
+END;
+/
+	
+  /* ------------- */
+ /* --FUNCTIONS-- */
+/* ------------- */
+	
 -- new_balance returns the sum of a balance 'x' and an incremental number 'incr_val'.
 CREATE OR REPLACE FUNCTION new_balance(x in number, incr_val in number)
 	RETURN number IS final_val number;
@@ -225,23 +290,6 @@ BEGIN
     proceeds := sale_price * shares;
     --dbms_output.put_line(proceeds);
     RETURN(proceeds);
-END;
-/
-
--- ON_SALE, upon a sale, decrements the seller's shares by that amount and increases the seller's balance by the value of the sold shares.
-CREATE OR REPLACE TRIGGER ON_SALE
-AFTER 
-UPDATE on OWNS
-FOR EACH ROW
-WHEN (new.shares < old.shares)
-DECLARE
-    newdate date;
-BEGIN    
-    SELECT l_date INTO newdate
-    FROM LASTUPDATE
-    WHERE symbol = :new.symbol;
-    
-    UPDATE CUSTOMER set balance = balance + sale_proceeds(:new.symbol, (:old.shares - :new.shares), newdate) WHERE login = :new.login;
 END;
 /
    
@@ -333,7 +381,7 @@ BEGIN
 END;
 /
 
--- get_n_preference returns the 'nth' preference symbol of an allocation 'alloc'.
+-- get_n_prefsymbol returns the 'nth' preference symbol of an allocation 'alloc'.
 CREATE OR REPLACE FUNCTION get_n_prefsymbol(nth in number, alloc in number)
     RETURN varchar IS symb varchar(20);
 BEGIN
@@ -348,6 +396,10 @@ BEGIN
       RETURN(symb);
 END;
 /
+
+  /* -------------- */
+ /* --PROCEDURES-- */
+/* -------------- */
 
 -- deposit adds an amount of money to a user's balance, calculates if purchases based on the user's allocation preferences can be made, and decrements the balance by that amount if possible.
 CREATE OR REPLACE PROCEDURE deposit(logi IN varchar, amoun IN float)
@@ -410,44 +462,7 @@ BEGIN
 END;
 /
 
-
--- ON_DEPOSIT, upon a purchase, adds to a user's balance, and checks to see if it is enough to fulfill the user's current allocation of buying preferences.
-
-CREATE OR REPLACE TRIGGER on_deposit
-AFTER 
-UPDATE on CUSTOMER
-FOR EACH ROW
-WHEN (new.balance < old.balance)
-DECLARE 
-    recent_alloc number;
-    money_alloc number;
-    shares_bought number;
-    numb_prefs number;
-    price_shares number;
-    owned_shares number;
-BEGIN
-    recent_alloc:= get_last_allocation(:new.login);
-    numb_prefs:= get_number_preferences(recent_alloc);
-    
-    for i in 1..numb_prefs LOOP
-		owned_shares := has_shares(:new.login, get_n_prefsymbol(i,recent_alloc));
-		-- dbms_output.put_line(i || '. owned_shares: ' || owned_shares);
-		money_alloc := get_n_preference(i, recent_alloc) * :old.balance;
-		-- dbms_output.put_line(i || '. money_alloc: ' || money_alloc);
-		-- dbms_output.put_line(i || '. get_n_preference(i, recent_alloc): ' || get_n_preference(i, recent_alloc));
-		-- dbms_output.put_line(i || '. :old.balance: ' || :old.balance);
-		shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
-		IF owned_shares = 1
-		THEN
-			UPDATE OWNS set shares = shares + shares_bought WHERE login = :new.login AND symbol = get_n_prefsymbol(i,recent_alloc);
-			ELSE
-			INSERT into OWNS values(:new.login, get_n_prefsymbol(i,recent_alloc), shares_bought);
-		END IF;
-		dbms_output.put_line('Bought ' || shares_bought || ' shares of ' || get_n_prefsymbol(i,recent_alloc) || '.');
-	end loop;
-END;
-/
-
+-- sale subtracts a number of shares of a fund, and adds its sale value to the user's balance.
 CREATE OR REPLACE PROCEDURE sale(logi IN varchar, symb IN varchar, numshare IN number)
 AS
     has_shares number;
@@ -478,8 +493,7 @@ BEGIN
 END;
 /
 
-
--- purchase1 allows the user to purchase a specific number of shares, provided it is affordable.
+-- purchase1 adds a number of shares of a fund, and subtracts its buy value from the user's balance.
 CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number)
 AS
     curr_price number;
@@ -518,7 +532,7 @@ BEGIN
 END;
 /
 
--- purchase2 allows the user to purchase a variable number of shares based on the amount given.
+-- purchase2 adds as many shares of a fund as the given amount can afford, and subtracts the price from the user's balance.
 CREATE OR REPLACE PROCEDURE purchase2(logi IN varchar, symb IN varchar, amount IN number)
 AS
     curr_price number;
@@ -568,24 +582,6 @@ BEGIN
 END;
 /
 
---Testing:
-exec deposit('mike', 100);
-
-select * from owns where login = 'mike';
-exec sale('mike', 'RE', 50);
-select * from owns;
-select * from customer;
-exec purchase1('mike', 'RE', 1);
--- Testing procedure purchase2
--- More than balance
-exec purchase2('mike', 'RE', 99999999);
--- Less than stock price
-exec purchase2('mike', 'RE', 1);
--- Just right
-exec purchase2('mike', 'RE', 10000);
--- More than just right
-exec purchase2('mike', 'RE', 251234);
-
 -- funds_in_range prints out all current fund prices within a given range.
 CREATE OR REPLACE PROCEDURE funds_in_range(lo_limit IN float DEFAULT 0, hi_limit IN float DEFAULT 99999999)
 AS
@@ -601,6 +597,31 @@ BEGIN
 	END LOOP;
 END;
 /
+
+  /* ----------- */
+ /* --TESTING-- */
+/* ----------- */
+
+-- Testing deposit with too little money to fulfill the user's autobuy preferences
+exec deposit('mike', 100);
+
+-- Testing sale with the exact number of shares owned, checking for delete
+exec sale('mike', 'RE', 50);
+select * from owns;
+select * from customer;
+
+-- Testing purchase1, simple case
+exec purchase1('mike', 'RE', 1);
+-- Testing purchase2
+	-- More than balance
+	exec purchase2('mike', 'RE', 99999999);
+	-- Less than stock price
+	exec purchase2('mike', 'RE', 1);
+	-- Just right
+	exec purchase2('mike', 'RE', 10000);
+	-- More than just right
+	exec purchase2('mike', 'RE', 251234);
+
 
 /*
 

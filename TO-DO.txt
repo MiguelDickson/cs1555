@@ -1,6 +1,5 @@
 TO-DO LIST:
 
-
 EARLY TEST-RUN:
 
     1) U1 and U2 login
@@ -15,21 +14,11 @@ EARLY TEST-RUN:
     10) U3 logs in
     11) U1, U3 log-out.
 
-SQL: 
-    depositing: (1-2)
-        deposit comes in (some amount)
-        check whether (some amount) allocation works
-        (precalculate all the buys)
-    
-        if so (either with amount or adj_amount)
-        update customer set balance -= amount / adj_amoun
-        TRIGGER
-        when new.balance < old.balance
-        adjust owns according to allocation * (diff old.balance - new.balance)
-        
+SQL:
+    depositing: (0) CHECK
     TRXLOG:
         make sure all actions/procedures, etc. appropriately register in TRXLOG (2)
-
+	
 JAVA:
     
 main_menu (0)   CHECK
