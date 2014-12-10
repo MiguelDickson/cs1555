@@ -201,13 +201,17 @@ public class Team10Project
        String address;
        String name;
        
-       //For new mutualfund
+       //For new pricequote 
+      
+       
+       //For new pricequote & mutualfund
        String mfsymbol;
        String mfname;
        String mfdescription;
        String mfcategory; 
        Date latestdate;
-
+       Date latestquotedate;
+       float newprice;
        
        
        int option=-1;
@@ -222,7 +226,7 @@ public class Team10Project
            System.out.println("Your options:");
            System.out.println("0: Logout");
            System.out.println("1: Add new user");
-           //System.out.println("2: Update share quote");
+           System.out.println("2: Update share quote");
            System.out.println("3: Add a new fund");
            //System.out.println("4: Update date and time");
            Scanner reader = new Scanner(System.in);
@@ -387,7 +391,130 @@ public class Team10Project
                    break;   
                      
              case 2:
-             
+                 quit = false;
+                  try{
+                    while (quit == false)
+                        { 
+                            //Check whether there's a valid date in the DB
+                            PreparedStatement pulldate = connection.prepareStatement("SELECT * FROM MUTUALDATE ORDER BY C_DATE DESC");
+                            resultSet2 = pulldate.executeQuery();
+                            if (resultSet2.isBeforeFirst()) //There is; keep going
+                            {
+                              resultSet2.next();
+                              latestdate = resultSet2.getDate(1);
+                              resultSet2.close();
+                              System.out.println("Please enter the mutual fund symbol you're entering a new price quote for (No more than 20 characters!) [Type QUIT to quit]:");
+                              mfsymbol = "";
+                              mfsymbol = reader.nextLine();                            
+                              if (!mfsymbol.equals("QUIT") && mfsymbol.length() < 20)
+                              {
+                                    PreparedStatement stmt = connection.prepareStatement("SELECT symbol FROM MUTUALFUND WHERE SYMBOL = ?"); 
+                                    System.out.println(stmt.toString());
+                                    System.out.println(mfsymbol);
+                                    
+                                    stmt.setString(1, mfsymbol);
+                                    resultSet = stmt.executeQuery();
+                                    if(!resultSet.isBeforeFirst()) //Symbol doesn't exist
+                                    {
+                                        System.out.println("Sorry, that mutual fund symbol is not in the DB. Please try again! Type anything and hit enter to continue.");
+                                        resultSet.close();
+                                        pause = reader.nextLine();  
+                                    }
+                                    else //Check last closing price date. See if it's equal to now (latest date)
+                                    { 
+                                        resultSet.close();
+                                        stmt = connection.prepareStatement("SELECT p_date FROM CLOSINGPRICE WHERE SYMBOL = ? GROUP BY p_date DESC "); 
+                                        stmt.setString(1, mfsymbol);
+                                        resultSet = stmt.executeQuery();
+                                        if (!resultSet.isBeforeFirst()) //No earlier price, can definitely insert IF there's a valid date, check that next
+                                        {
+                                            resultSet.close();
+                                            System.out.println("Please enter the price for the new quote: (XX.YY format please)");
+                                            newprice = reader.nextFloat();
+                                            stmt = connection.prepareStatement("INSERT INTO CLOSINGPRICE VALUES(?,?,?");
+                                            stmt.setString(1, mfsymbol);
+                                            stmt.setFloat(2, newprice);
+                                            stmt.setDate(3, latestdate);
+                                            connection.setAutoCommit(false);
+                                            connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                                            stmt.executeUpdate();
+                                            connection.commit();
+                                            connection.setAutoCommit(true);
+                                            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                                            
+                                            System.out.println("Price updated! Please type anything and hit enter to continue!");
+                                            quit = true;
+                                             //This is basically a pause
+                                            pause = reader.nextLine(); 
+                                                                              
+                                        }
+                                        else //Check whether these dates are the same
+                                        {
+                                            resultSet.next();
+                                            latestquotedate = resultSet.getDate(1);
+                                            resultSet.close();
+                                            if (!latestquotedate.equals(latestdate))
+                                            {
+                                                System.out.println("Please enter the price for the new quote: (XX.YY format please)");
+                                                newprice = reader.nextFloat();
+                                                stmt = connection.prepareStatement("INSERT INTO CLOSINGPRICE VALUES(?,?,?");
+                                                stmt.setString(1, mfsymbol);
+                                                stmt.setFloat(2, newprice);
+                                                stmt.setDate(3, latestdate);
+                                                connection.setAutoCommit(false);
+                                                connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                                                stmt.executeUpdate();
+                                                connection.commit();
+                                                connection.setAutoCommit(true);
+                                                connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                                                
+                                                System.out.println("Price updated! Please type anything and hit enter to continue!");
+                                                quit = true;
+                                                 //This is basically a pause
+                                                pause = reader.nextLine(); 
+                                                                                  
+                                            }
+                                            else
+                                            {
+                                             
+                                             System.out.println("This share has already been updated for the current date.");
+                                             System.out.println("Update the date if you wish to enter a new price.");
+                                             quit = true;
+                                              //This is basically a pause
+                                             pause = reader.nextLine(); 
+                                                                                      
+                                            }
+                                              
+                                        }
+                                    }
+           
+                              }
+                              else
+                              {    if (mfsymbol.equals("QUIT"))
+                                            quit = true;
+                                   else
+                                   {
+                                    System.out.println("Sorry, invalid mutual fund symbol!");
+                                    //This is basically a pause
+                                    pause = reader.nextLine();     
+                                   }
+                              }
+                          }
+                          else
+                          {
+                            System.out.println("Sorry, there is no valid date to apply this price to. Please update with a valid date before repeating!");
+                            quit = true;
+                             //This is basically a pause
+                            pause = reader.nextLine(); 
+                                                        
+                          }
+                     }
+                    }
+                    catch(Exception Ex)
+                    {
+                       System.out.println("Error with mutualfund or closingprice or mutual date tables.  Machine Error: " + Ex.toString());
+                    }
+                 break;
              case 3:
                  quit = false;
                  try{
@@ -433,7 +560,7 @@ public class Team10Project
                                                  stmt.executeUpdate();
                                                  connection.commit();
                                                  connection.setAutoCommit(true);
-                                                 connection.setTransactionIsolation(Connection.READ_COMMITTED);
+                                                 connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
                                                  resultSet.close();
                                                  resultSet2.close();
                                                                                                                                                  
@@ -448,6 +575,8 @@ public class Team10Project
                                                 resultSet2.close();
                                                 resultSet.close();
                                                 System.out.println("No valid date entered in the system to create this mutual fund!");
+                                                quit = true;
+                                                pause = reader.nextLine();  
                                                 }
                                             
                                            }
