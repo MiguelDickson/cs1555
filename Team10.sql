@@ -188,7 +188,7 @@ INSERT INTO CLOSINGPRICE values('GS', 15, '02-APR-14');
 
 SET SERVEROUTPUT ON;
 
-
+---------------------------------------------------------------------------------------------------------------
 
 -- LASTUPDATE is a view that displays all funds' latest dates.
 CREATE OR REPLACE VIEW LASTUPDATE
@@ -245,8 +245,6 @@ BEGIN
 END;
 /
    
-
-   
 -- share_prices returns the cost of a number of shares 'shares' for a fund 'symbol' on a date 'sell_date'.
 CREATE OR REPLACE FUNCTION share_prices(sym in varchar, shares in number, buy_date date)
     RETURN number IS cost number;
@@ -280,7 +278,6 @@ BEGIN
       END IF;       
 END;
 /
-
 
 -- get_last_allocation returns the last allocation of user 'log_name'.
 CREATE OR REPLACE FUNCTION get_last_allocation(log_name in varchar)
@@ -352,11 +349,19 @@ BEGIN
 END;
 /
 
-
-
+-- deposit adds an amount of money to a user's balance, calculates if purchases based on the user's allocation preferences can be made, and decrements the balance by that amount if possible.
 CREATE OR REPLACE PROCEDURE deposit(logi IN varchar, amoun IN float)
 AS
     old_balance number;
+	shares_not_purchased number;
+	recent_alloc number;
+	money_alloc number;
+    shares_bought number;
+    numb_prefs number;
+    before_buy number;
+    after_buy number;
+    price_shares number;
+    owned_shares number;
 BEGIN
     IF amoun < 0
         THEN
@@ -366,7 +371,45 @@ BEGIN
         FROM CUSTOMER
         WHERE login = logi;
     
-        UPDATE CUSTOMER set balance = old_balance + amoun WHERE login = logi;
+        -- (precalculate all the buys)
+        -- if so (either with amount or adj_amount)
+        -- update customer set balance -= amount / adj_amoun
+	
+        before_buy := old_balance + amoun;
+		after_buy := before_buy;
+		
+		shares_not_purchased := 0;
+		recent_alloc := get_last_allocation(logi);
+		numb_prefs:= get_number_preferences(recent_alloc);
+		
+		for i in 1..numb_prefs LOOP
+			money_alloc := get_n_preference(i, recent_alloc) * before_buy;
+			--dbms_output.put_line('This amount of the current balance of the allocated amount is allocated:');
+			--dbms_output.put_line(money_alloc);
+			shares_bought := FLOOR(money_alloc / get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
+			IF (shares_bought = 0)
+			THEN
+				shares_not_purchased:=1;
+			END IF;        
+			--dbms_output.put_line('This number of shares were purchased:');
+			--dbms_output.put_line(shares_bought);
+			after_buy := after_buy - (shares_bought * (get_last_closing_price(get_n_prefsymbol(i,recent_alloc))));
+			--dbms_output.put_line('Balance is now:');
+			--dbms_output.put_line(after_buy);    
+		END LOOP; 
+		
+			--dbms_output.put_line('End balance is:');
+			--dbms_output.put_line(after_buy);    
+			
+		IF (shares_not_purchased = 1)
+			THEN
+			dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
+			UPDATE CUSTOMER set balance = before_buy;
+		ELSE
+			dbms_output.put_line('Successfully bought shares!');
+			UPDATE CUSTOMER set balance = after_buy;
+		END IF;
+		
     END IF;
 END;
 /
@@ -378,7 +421,7 @@ CREATE OR REPLACE TRIGGER on_deposit
 AFTER 
 UPDATE on CUSTOMER
 FOR EACH ROW
-WHEN (new.balance > old.balance)
+WHEN (new.balance < old.balance)
 DECLARE 
     recent_alloc number;
     money_alloc number;
@@ -388,13 +431,7 @@ DECLARE
     price_shares number;
     shares_not_purchased number;
     owned_shares number;
-BEGIN   
-    --SELECT :new.amount into cur_balance 
-    --from CUSTOMER
-    --WHERE (:new.login = login); 
-    cur_balance:= :new.balance;
-
-    shares_not_purchased:= 0;
+BEGIN
     recent_alloc:= get_last_allocation(:new.login);
     numb_prefs:= get_number_preferences(recent_alloc);
     
@@ -471,44 +508,44 @@ END;
 
 
 --set # of shares to purchase
-CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number)
-AS
-    has_shares number;
-    curr_price number;
-    curr_balance number;
-    price_shares number;
-BEGIN
-    execute immediate 'ALTER TRIGGER on_deposit DISABLE';
-    IF numshare < 0
-        THEN
-        dbms_output.put_line('Cannot buy negative shares bro!!!');
-    ELSE
-        SELECT shares INTO has_shares
-        FROM OWNS
-        WHERE login = logi AND symbol = symb; 
+-- CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number)
+-- AS
+    -- has_shares number;
+    -- curr_price number;
+    -- curr_balance number;
+    -- price_shares number;
+-- BEGIN
+    -- execute immediate 'ALTER TRIGGER on_deposit DISABLE';
+    -- IF numshare < 0
+        -- THEN
+        -- dbms_output.put_line('Cannot buy negative shares bro!!!');
+    -- ELSE
+        -- SELECT shares INTO has_shares
+        -- FROM OWNS
+        -- WHERE login = logi AND symbol = symb; 
         
-        SELECT balance INTO curr_balance
-        FROM CUSTOMER
-        WHERE login = logi;
+        -- SELECT balance INTO curr_balance
+        -- FROM CUSTOMER
+        -- WHERE login = logi;
         
-        SELECT price INTO curr_price
-        FROM LATESTPRICE
-        WHERE symbol = symb;
+        -- SELECT price INTO curr_price
+        -- FROM LATESTPRICE
+        -- WHERE symbol = symb;
         
-        price_shares := price * numshare;
+        -- price_shares := price * numshare;
         
-        IF curr_balance < price_shares
-            THEN
-            dbms_output.put_line('Cannot sell more shares than you have, bro!!');
-        ELSE
-            UPDATE OWNS set shares = has_shares + numshare WHERE login = logi AND symbol = symb;
-            UPDATE CUSTOMER set balance = balance - price_shares WHERE login = logi;  
+        -- IF curr_balance < price_shares
+            -- THEN
+            -- dbms_output.put_line('Cannot sell more shares than you have, bro!!');
+        -- ELSE
+            -- UPDATE OWNS set shares = has_shares + numshare WHERE login = logi AND symbol = symb;
+            -- UPDATE CUSTOMER set balance = balance - price_shares WHERE login = logi;  
             
-        END IF;
-    END IF;
-    execute immediate 'ALTER TRIGGER on_deposit ENABLE';
-END;
-/
+        -- END IF;
+    -- END IF;
+    -- execute immediate 'ALTER TRIGGER on_deposit ENABLE';
+-- END;
+-- /
 
 
 
