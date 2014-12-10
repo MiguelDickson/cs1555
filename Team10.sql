@@ -131,6 +131,8 @@ INSERT INTO MUTUALDATE values('01-APR-14');
 INSERT INTO MUTUALDATE values('02-APR-14');
 INSERT INTO MUTUALDATE values('03-APR-14');
 
+INSERT INTO ADMINISTRATOR values('admin', 'Administrator', 'admin@gmail.com', 'somewhere street', 'root');
+
 INSERT INTO CUSTOMER values('mike', 'Mike', 'mike@betterfuture.com', '1st street', 'pwd', 0);
 INSERT INTO CUSTOMER values('mary', 'Mary', 'mary@betterfuture.com', '2nd street', 'pwd', 0);
 
