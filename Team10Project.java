@@ -466,16 +466,18 @@ void user_menu(String userlogin)
                         String fourthpart = "SELECT login, total_shares ";
                         String fifthpart = "FROM ";
                         String sixthpart = "(select login, sum(num_shares) as total_shares from trxlog where 'action' = 'buy' and t_date < current_date - INTERVAL";
-                        String seventhpart = " '?' MONTH group by login order by total_shares desc) ";
-                        String eighthpart = "where rownum <=? order by rownum";
+                        String seventhpart = " '" + Integer.toString(num_months) + "' MONTH group by login order by total_shares desc) ";
+                        String eighthpart = "where rownum <=" + Integer.toString(num_investors) +" order by rownum";
                         String query = firstpart+secondpart+thirdpart+fourthpart+fifthpart+sixthpart+seventhpart+eighthpart;
-                        PreparedStatement stmt = connection.prepareStatement(query); 
-                        stmt.setInt(1, num_months);
-                        stmt.setInt(2, num_investors);                   
-                        resultSet = stmt.executeQuery();                  
+                        Statement stmt = connection.createStatement();
+                        //query); 
+                        //stmt.setInt(1, num_months);
+                        //stmt.setInt(2, num_investors);                   
+                        resultSet = stmt.executeQuery(query);                  
                            if (!resultSet.isBeforeFirst())
                            {
                            System.out.println("There were no purchases by investors in this time frame.");
+                           quit = true;
                            //This is basically a pause
                            pause = reader.nextLine();                       
                            }
@@ -489,6 +491,10 @@ void user_menu(String userlogin)
                               System.out.println("#"+counter+ " investor, " + investor_name + " bought " +num_shares + "shares");                       
                          
                             }
+                             System.out.println("Press any key and hit enter to return to the usage statistics menu.");
+                             quit = true;
+                             //This is basically a pause
+                             pause = reader.nextLine();  
                            }
                            
                            
