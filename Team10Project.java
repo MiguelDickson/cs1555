@@ -82,9 +82,9 @@ public class Team10Project
            System.out.println("Browsing mutual funds!");
            System.out.println("Your options:");
            System.out.println("0: Back to User Menu");
-           System.out.println("1: Print all mutual funds in alphabetical order");
+           //System.out.println("1: ");
            //System.out.println("2: ");
-           //System.out.println("3: ");
+           System.out.println("3: Print all mutual funds in alphabetical order");
            //System.out.println("4: ");
            Scanner reader = new Scanner(System.in);
           // reader.nextLine();
@@ -204,12 +204,13 @@ void user_menu(String userlogin)
 		{
 			case 1:
 				browse_mutual_funds();
-				default:
-				break;
+			break;
 
 			case 3:
+				System.out.print(ANSI_CLS + ANSI_HOME);
+				System.out.flush();
 				try
-				{
+				{	
 					System.out.println("Please enter the amount you would like to deposit [Type QUIT to quit]:");
 					amount = reader.nextLine();
 					if (!amount.equals("QUIT") && isInteger(amount))
@@ -230,7 +231,11 @@ void user_menu(String userlogin)
 				{
 					System.out.println("Error with inserting on customer or admin table.  Machine Error: " + Ex.toString());
 				}
-				break;   
+			break;
+			
+			case 0:
+			default:
+			break;
 		}
 	}
 }
