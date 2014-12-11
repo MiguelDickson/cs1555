@@ -199,7 +199,7 @@ void user_menu(String userlogin)
 		Scanner reader = new Scanner(System.in);
 		//reader.nextLine();
 		option = reader.nextInt();
-		//pause = reader.nextLine();
+		pause = reader.nextLine();
 		switch(option)
 		{
 			case 1:
@@ -215,21 +215,28 @@ void user_menu(String userlogin)
 					amount = reader.nextLine();
 					if (!amount.equals("QUIT") && isInteger(amount))
 					{
+						System.out.println("TESTING: Inside the if block.");
+						pause = reader.nextLine();
 						amt = Integer.parseInt(amount);
-						PreparedStatement stmt = connection.prepareStatement("EXEC deposit(?,?)");
+						CallableStatement stmt = connection.prepareCall("EXEC deposit(?,?)");
 						stmt.setString(1, userlogin);
 						stmt.setInt(2, amt);
-						resultSet = stmt.executeQuery();
+						resultSet = stmt.execute();
+						System.out.println("Done! Not sure if success or not.");
+						pause = reader.nextLine();
 					}
 					else
 					{
 						System.out.println("Sorry, invalid amount!");
-						//This is basically a pause                   
+						//This is basically a pause
+						pause = reader.nextLine();
 					}
 				}
 				catch(Exception Ex)
 				{
 					System.out.println("Error with inserting on customer or admin table.  Machine Error: " + Ex.toString());
+					//This is basically a pause
+					pause = reader.nextLine();
 				}
 			break;
 			
@@ -921,8 +928,12 @@ void user_menu(String userlogin)
                 }
              break;  
              
-            
-             case 5:
+             
+             
+             
+             
+             
+             case 0:
              default:
              break;
              
