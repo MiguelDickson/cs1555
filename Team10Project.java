@@ -181,6 +181,7 @@ void user_menu(String userlogin)
 	int amt;
 	String numStocks;
 	int stk;
+	int success;	// Return value from transaction stored procedures
 	
 	
 	while (option!=0)
@@ -216,11 +217,27 @@ void user_menu(String userlogin)
 						// System.out.println("TESTING: Inside the if block.");
 						// pause = reader.nextLine();
 						amt = Integer.parseInt(amount);
-						CallableStatement stmt = connection.prepareCall("CALL deposit(?,?)");
+						success = -1;
+						
+						// Get ready to execute this stored procedure...
+						CallableStatement stmt = connection.prepareCall("CALL deposit(?,?,?)");
 						stmt.setString(1, userlogin);
 						stmt.setInt(2, amt);
+						stmt.registerOutParameter(3, java.sql.Types.INTEGER);
+
 						resultSet = stmt.executeQuery();
-						System.out.println("Done! Not sure if success or not.");
+						
+						// Retrieve success value.
+						success = stmt.getInt(3);
+						// System.out.println("TESTING: " + success);
+						if(success == 2)
+							System.out.println("Success! $" + amt + " deposited into account, and buying preferences automated accordingly.");
+						else if(success == 1)
+							System.out.println("$" + amt + " deposited into account. Not enough to automate buying preferences.");
+						else if(success == 0)
+							System.out.println("Error: unsuccessful deposit.");
+						else
+							System.out.println("Error: no value returned");
 						pause = reader.nextLine();
 					}
 					else

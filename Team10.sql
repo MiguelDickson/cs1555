@@ -388,7 +388,7 @@ END;
 /* -------------- */
 
 -- deposit adds an amount of money to a user's balance, calculates if purchases based on the user's allocation preferences can be made, and decrements the balance by that amount if possible.
-CREATE OR REPLACE PROCEDURE deposit(logi IN varchar, amoun IN float)
+CREATE OR REPLACE PROCEDURE deposit(logi IN varchar, amoun IN float, success OUT number)
 AS
     old_balance number;
 	shares_not_purchased number;
@@ -404,6 +404,7 @@ BEGIN
     IF amoun < 0
 	THEN
         dbms_output.put_line('Cannot deposit negative money bro!!!');
+		success := 0;
     ELSE
         SELECT balance INTO old_balance
         FROM CUSTOMER
@@ -440,9 +441,11 @@ BEGIN
 		IF (shares_not_purchased = 1)
 		THEN
 			dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
+			success := 1;
 		ELSE
 			UPDATE CUSTOMER set balance = after_buy WHERE login = logi;
 			add_trx(logi, NULL, 'deposit', NULL, NULL, before_buy - after_buy);
+			success := 2;
 		END IF;
 		
     END IF;
@@ -450,7 +453,7 @@ END;
 /
 
 -- sale subtracts a number of shares of a fund, and adds its sale value to the user's balance.
-CREATE OR REPLACE PROCEDURE sale(logi IN varchar, symb IN varchar, numshare IN number)
+CREATE OR REPLACE PROCEDURE sale(logi IN varchar, symb IN varchar, numshare IN number, success OUT number)
 AS
     has_shares number;
 BEGIN
@@ -458,6 +461,7 @@ BEGIN
     IF numshare < 0
 	THEN
         dbms_output.put_line('Cannot sell negative shares bro!!!');
+		success := 0;
     ELSE
         SELECT shares INTO has_shares
         FROM OWNS
@@ -468,8 +472,10 @@ BEGIN
             dbms_output.put_line('Selling shares!');
             UPDATE OWNS set shares = has_shares - numshare WHERE login = logi AND symbol = symb;
 			add_trx(logi, symb, 'sell', numshare, get_last_closing_price(symb), numshare * get_last_closing_price(symb));
+			success := 1;
 		ELSE
             dbms_output.put_line('Cannot sell more shares than you have, bro!!');
+			success := 0;
         END IF;
 		
 		IF has_shares - numshare = 0
@@ -482,7 +488,7 @@ END;
 /
 
 -- purchase1 adds a number of shares of a fund, and subtracts its buy value from the user's balance.
-CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number)
+CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number, success OUT number)
 AS
     curr_price number;
     curr_balance number;
@@ -492,6 +498,7 @@ BEGIN
     IF numshare <= 0
 	THEN
         dbms_output.put_line('Must buy at least one share, bro!!!');
+		success := 0;
     ELSE        
         SELECT balance INTO curr_balance
         FROM CUSTOMER
@@ -506,6 +513,7 @@ BEGIN
         IF curr_balance < price_shares
 		THEN
             dbms_output.put_line('Cannot buy more shares than you can afford, bro!!');
+			success := 0;
         ELSE
 			IF has_shares(logi, symb) = 1
 			THEN
@@ -515,6 +523,7 @@ BEGIN
 			END IF;
 			UPDATE CUSTOMER set balance = curr_balance - price_shares WHERE login = logi;
 			add_trx(logi, symb, 'buy', numshare, curr_price, price_shares);
+			success := 1;
         END IF;
     END IF;
     execute immediate 'ALTER TRIGGER on_deposit ENABLE';
@@ -522,7 +531,7 @@ END;
 /
 
 -- purchase2 adds as many shares of a fund as the given amount can afford, and subtracts the price from the user's balance.
-CREATE OR REPLACE PROCEDURE purchase2(logi IN varchar, symb IN varchar, amount IN number)
+CREATE OR REPLACE PROCEDURE purchase2(logi IN varchar, symb IN varchar, amount IN number, success OUT number)
 AS
     curr_price number;
     curr_balance number;
@@ -532,6 +541,7 @@ BEGIN
     IF amount <= 0
 	THEN
         dbms_output.put_line('Must spend something, bro!!!');
+		success := 0;
     ELSE        
         SELECT balance INTO curr_balance
         FROM CUSTOMER
@@ -541,6 +551,7 @@ BEGIN
 		IF curr_balance < amount
 		THEN
 			dbms_output.put_line('Cannot spend more than your current balance, bro!!');
+			success := 0;
 		ELSE
 			SELECT price INTO curr_price
 			FROM LATESTPRICE
@@ -553,6 +564,7 @@ BEGIN
 			IF shares_bought = 0
 			THEN
 				dbms_output.put_line('Cannot afford a single share, bro!!');
+				success := 0;
 			ELSE
 				IF has_shares(logi, symb) = 1
 				THEN
@@ -565,6 +577,7 @@ BEGIN
 				-- dbms_output.put_line(get_last_closing_price(symb));
 				UPDATE CUSTOMER set balance = (curr_balance - (shares_bought * curr_price)) WHERE login = logi;
 				add_trx(logi, symb, 'buy', shares_bought, curr_price, shares_bought * curr_price);
+				success := 1;
 			END IF;
 		END IF;
     END IF;
