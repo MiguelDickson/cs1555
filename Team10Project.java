@@ -75,8 +75,8 @@ public class Team10Project
            System.out.flush();
            System.out.println("Browsing mutual funds!");
            System.out.println("Your options:");
-           System.out.println("0: Logout");
-           System.out.println("1: Print all mutual funds in alphabetical order:");
+           System.out.println("0: Back to User Menu");
+           System.out.println("1: Print all mutual funds in alphabetical order");
            //System.out.println("2: ");
            //System.out.println("3: ");
            //System.out.println("4: ");
@@ -151,43 +151,84 @@ public class Team10Project
   
   }
   
+// Check if input is integer
+public static boolean isInteger(String s) {
+	try { 
+		Integer.parseInt(s); 
+	} catch(NumberFormatException e) { 
+		return false; 
+	}
+	// only got here if we didn't return false
+	return true;
+}
   
   
-  
-  
-  //Takes userlogin for various queries
-  void user_menu(String userlogin)
-  {
-       String pause;
-       boolean quit = false;
-       int option=-1;
-       while (option!=0)
-       {
-           final String ANSI_CLS = "\u001b[2J";
-           final String ANSI_HOME = "\u001b[H";
-           System.out.print(ANSI_CLS + ANSI_HOME);
-           System.out.flush();
-           System.out.println("Welcome to the user interface!");
-           System.out.println("Your options:");
-           System.out.println("0: Logout");
-           System.out.println("1: Browse Mutual Funds:");
-           //System.out.println("2: ");
-           //System.out.println("3: ");
-           //System.out.println("4: ");
-           Scanner reader = new Scanner(System.in);
-          // reader.nextLine();
-           option = reader.nextInt();
-         //  pause = reader.nextLine();
-           switch (option)
-           { 
-                case 1:
-                        browse_mutual_funds();
-                default:
-                break;
-           }
-       }
-  }
-    
+//Takes userlogin for various queries
+void user_menu(String userlogin)
+{
+	String pause;
+	boolean quit = false;
+	int option=-1;
+	
+	// For transaction values.
+	String amount;
+	int amt;
+	String numStocks;
+	int stk;
+	
+	
+	while (option!=0)
+	{
+		final String ANSI_CLS = "\u001b[2J";
+		final String ANSI_HOME = "\u001b[H";
+		System.out.print(ANSI_CLS + ANSI_HOME);
+		System.out.flush();
+		System.out.println("Welcome to the user interface!");
+		System.out.println("Your options:");
+		System.out.println("0: Logout");
+		System.out.println("1: Browse Mutual Funds");
+		//System.out.println("2: ");
+		System.out.println("3: Deposit into account");
+		//System.out.println("4: ");
+		Scanner reader = new Scanner(System.in);
+		//reader.nextLine();
+		option = reader.nextInt();
+		//pause = reader.nextLine();
+		switch(option)
+		{
+			case 1:
+				browse_mutual_funds();
+				default:
+				break;
+
+			case 3:
+				try
+				{
+					System.out.println("Please enter the amount you would like to deposit [Type QUIT to quit]:");
+					amount = reader.nextLine();
+					if (!amount.equals("QUIT") && isInteger(amount))
+					{
+						amt = Integer.parseInt(amount);
+						PreparedStatement stmt = connection.prepareStatement("EXEC deposit(?,?)");
+						stmt.setString(1, userlogin);
+						stmt.setInt(2, amt);
+						resultSet = stmt.executeQuery();
+					}
+					else
+					{
+						System.out.println("Sorry, invalid amount!");
+						//This is basically a pause                   
+					}
+				}
+				catch(Exception Ex)
+				{
+					System.out.println("Error with inserting on customer or admin table.  Machine Error: " + Ex.toString());
+				}
+				break;   
+		}
+	}
+}
+
   void admin_menu()
   {
        String pause;

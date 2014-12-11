@@ -291,6 +291,7 @@ BEGIN
     --dbms_output.put_line(proceeds);
     RETURN(proceeds);
 END;
+/
 
 -- has_shares returns a 1 if user 'log_name' owns shares in 'symb'.
 CREATE OR REPLACE FUNCTION has_shares(log_name in varchar, symb in varchar)
@@ -440,7 +441,7 @@ BEGIN
 			dbms_output.put_line('Was unable to buy some shares and so placing the deposit into balance entirely.');
 		ELSE
 			UPDATE CUSTOMER set balance = after_buy WHERE login = logi;
-			add_trx(logi, symb, 'deposit', NULL);
+			add_trx(logi, NULL, 'deposit', NULL, NULL, before_buy - after_buy);
 		END IF;
 		
     END IF;
@@ -465,7 +466,7 @@ BEGIN
 		THEN
             dbms_output.put_line('Selling shares!');
             UPDATE OWNS set shares = has_shares - numshare WHERE login = logi AND symbol = symb;
-			add_trx(logi, symb, 'sell', numshare);
+			add_trx(logi, symb, 'sell', numshare, get_last_closing_price(symb), numshare * get_last_closing_price(symb));
 		ELSE
             dbms_output.put_line('Cannot sell more shares than you have, bro!!');
         END IF;
@@ -512,7 +513,7 @@ BEGIN
 				INSERT INTO OWNS values(logi, symb, numshare);
 			END IF;
 			UPDATE CUSTOMER set balance = curr_balance - price_shares WHERE login = logi;
-			add_trx(logi, symb, 'buy', numshare);
+			add_trx(logi, symb, 'buy', numshare, curr_price, price_shares);
         END IF;
     END IF;
     execute immediate 'ALTER TRIGGER on_deposit ENABLE';
@@ -545,7 +546,7 @@ BEGIN
 			WHERE symbol = symb;
 			
 			-- Calculate how many shares you can purchase.
-			shares_bought := FLOOR(amount / get_last_closing_price(symb));
+			shares_bought := FLOOR(amount / curr_price);
 			
 			-- Check if any were bought.
 			IF shares_bought = 0
@@ -561,8 +562,8 @@ BEGIN
 				-- dbms_output.put_line(curr_balance);
 				-- dbms_output.put_line(shares_bought);
 				-- dbms_output.put_line(get_last_closing_price(symb));
-				UPDATE CUSTOMER set balance = (curr_balance - (shares_bought * get_last_closing_price(symb))) WHERE login = logi;
-				add_trx(logi, symb, 'buy', shares_bought);
+				UPDATE CUSTOMER set balance = (curr_balance - (shares_bought * curr_price)) WHERE login = logi;
+				add_trx(logi, symb, 'buy', shares_bought, curr_price, shares_bought * curr_price);
 			END IF;
 		END IF;
     END IF;
@@ -587,23 +588,27 @@ END;
 /
 
 -- add_trx adds a new transaction record to TRXLOG, taking in as few inputs as possible.
-CREATE OR REPLACE PROCEDURE add_trx(logi IN varchar, symb IN varchar, action IN varchar, num_shares IN number)
+CREATE OR REPLACE PROCEDURE add_trx(logi IN varchar, symb IN varchar, action IN varchar, num_shares IN number, curr_price IN number, total_amount IN number)
 AS
-	last_tid int;
+	num_trx number;
+	last_tid number;
 	curr_date date;
-	curr_price float;
-	total_amount float;
 BEGIN
-	SELECT MAX(trans_id) INTO last_tid
+	-- Check if TRXLOG has tuples.
+	SELECT COUNT(*) INTO num_trx
 	FROM TRXLOG;
+	
+	-- If not, start at trans_id of 0. Otherwise, increment from largest trans_id.
+	IF num_trx = 0
+	THEN
+		last_tid := 0;
+	ELSE
+		SELECT MAX(trans_id) INTO last_tid
+		FROM TRXLOG;
+	END IF;
 	
 	SELECT MAX(c_date) INTO curr_date
 	FROM MUTUALDATE;
-	
-	SELECT price INTO curr_price
-	FROM LATESTPRICE;
-	
-	total_amount := num_shares * curr_price;
 	
 	INSERT INTO TRXLOG values(last_tid + 1, logi, symb, curr_date, action, num_shares, curr_price, total_amount);
 END;
@@ -613,8 +618,14 @@ END;
  /* --TESTING-- */
 /* ----------- */
 
+-- Testing deposit with lots of money
+exec deposit('mike', 99999);
+select * from owns;
+select * from customer;
 -- Testing deposit with too little money to fulfill the user's autobuy preferences
 exec deposit('mike', 100);
+select * from owns;
+select * from customer;
 
 -- Testing sale with the exact number of shares owned, checking for delete
 exec sale('mike', 'RE', 50);
@@ -623,15 +634,25 @@ select * from customer;
 
 -- Testing purchase1, simple case
 exec purchase1('mike', 'RE', 1);
+select * from owns;
+select * from customer;
 -- Testing purchase2
 	-- More than balance
 	exec purchase2('mike', 'RE', 99999999);
+	select * from owns;
+	select * from customer;
 	-- Less than stock price
 	exec purchase2('mike', 'RE', 1);
+	select * from owns;
+	select * from customer;
 	-- Just right
 	exec purchase2('mike', 'RE', 10000);
+	select * from owns;
+	select * from customer;
 	-- More than just right
 	exec purchase2('mike', 'RE', 251234);
+	select * from owns;
+	select * from customer;
 
 
 /*
