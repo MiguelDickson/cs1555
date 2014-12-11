@@ -156,6 +156,67 @@ public class Team10Project
   
   }
   
+void find_mutual_funds()
+{
+        String search1;
+        String search2;
+        String fundname;
+        String funddescription;
+        String pause;
+        Scanner reader = new Scanner(System.in);
+        System.out.println("Please enter the first search term you'd like to find in a mutual fund description: [Type QUIT to quit]:");
+        search1 = reader.nextLine();
+        if (!(search1.equals("QUIT")))
+        {
+            System.out.println("Please enter the second search term you'd like to find in a mutual fund description: [Type QUIT to quit]:");
+            search2 = reader.nextLine();
+            if (!(search1.equals("QUIT")))
+            {
+                 try {
+                    
+                    statement = connection.createStatement(); //create an instance
+                    query = "SELECT symbol, description FROM MUTUALFUND WHERE DESCRIPTION LIKE " + "'%" + search1 + "%'" + " OR DESCRIPTION LIKE " + "'%" + search2 + "%'"; 
+                    resultSet = statement.executeQuery(query);
+                    if (!resultSet.isBeforeFirst())
+                    {
+                    System.out.println("No matching funds found!");
+					//This is basically a pause
+					pause = reader.nextLine();
+                    }
+                    else
+                    {
+                        System.out.println("Results:");
+                        while (resultSet.next())
+                        {
+                        fundname = resultSet.getString(1);
+                        funddescription = resultSet.getString(2);
+                        System.out.println("Fund:");
+                        System.out.println(fundname);
+                        System.out.println("Description:");
+                        System.out.println(funddescription);
+                        }
+                       resultSet.close();
+                       pause = reader.nextLine();
+                    }
+            
+                }
+                catch(Exception Ex)
+				{
+					System.out.println("Error with inserting on customer or admin table.  Machine Error: " + Ex.toString());
+					//This is basically a pause
+					pause = reader.nextLine();
+				}
+        
+            }
+        }
+
+
+
+
+}  
+  
+  
+  
 // Check if input is integer
 public static boolean isInteger(String s) {
 	try { 
@@ -204,7 +265,7 @@ void user_menu(String userlogin)
 		System.out.println("Your options:");
 		System.out.println("0: Logout");
 		System.out.println("1: Browse Mutual Funds");
-		//System.out.println("2: ");
+		System.out.println("2: Find Mutual Funds");
 		System.out.println("3: Deposit into account (auto-buy)");
 		System.out.println("4: Sell shares");
 		System.out.println("5: Purchase shares");
@@ -218,6 +279,10 @@ void user_menu(String userlogin)
 				browse_mutual_funds();
 			break;
 
+            case 2:
+                find_mutual_funds();
+            break;
+            
 			case 3:
 				try
 				{	
