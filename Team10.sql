@@ -245,6 +245,7 @@ BEGIN
 			INSERT into OWNS values(:new.login, get_n_prefsymbol(i,recent_alloc), shares_bought);
 		END IF;
 		dbms_output.put_line('Bought ' || shares_bought || ' shares of ' || get_n_prefsymbol(i,recent_alloc) || '.');
+		add_trx(:new.login, get_n_prefsymbol(i,recent_alloc), 'buy', shares_bought, get_last_closing_price(get_n_prefsymbol(i, recent_alloc)), shares_bought * get_last_closing_price(get_n_prefsymbol(i, recent_alloc)));
 	end loop;
 END;
 /
