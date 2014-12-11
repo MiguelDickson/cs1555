@@ -330,6 +330,151 @@ void user_menu(String userlogin)
 	}
 }
 
+    void stats_menu()
+  {
+       String pause;
+       String line ="";
+       String date ="";
+       boolean quit = false;
+       int option=-1;
+       int num_months = 0;
+       while (option!=0)
+       {
+           final String ANSI_CLS = "\u001b[2J";
+           final String ANSI_HOME = "\u001b[H";
+           System.out.print(ANSI_CLS + ANSI_HOME);
+           System.out.flush();
+           System.out.println("Usage Statistics menu:");
+           System.out.println("Your options:");
+           System.out.println("0: Back to Admin Menu");
+           System.out.println("1: Display the top X categories in the past months.");
+           System.out.println("2: Display the top X investors with the most money in shares in the past months.");
+           System.out.println("3: Print all mutual funds in alphabetical order");
+           //System.out.println("4: ");
+           Scanner reader = new Scanner(System.in);
+          // reader.nextLine();
+           option = reader.nextInt();
+           pause = reader.nextLine();
+           try
+           {
+               switch (option)
+               { 
+                    case 1:
+                    quit = false;
+                    while (quit == false)
+                    {
+                    //take this out after.
+                    quit = true;
+                    }
+                    
+                    option = 0;
+                    break;
+                    
+                    case 2:
+                    quit = false;
+                    while (quit == false)
+                    {
+                     System.out.println("Please enter how many months back from the current system date you wish to search: [Type 0 to quit]:");
+                     num_months = reader.nextInt();
+                     pause = reader.nextLine();
+                     if (num_months > 0)
+                     {
+                      int num_investors = 0;
+                      System.out.println("Please enter how many of the top investors you wish to find (from the top investor down): [Type 0 to quit]:");
+                      num_investors = reader.nextInt();
+                      pause = reader.nextLine();
+                        if (num_investors > 0)
+                        {
+                        
+                        //The innermost query selects for the most recent date. X months is subtracted from that to form the time period to search through the trxlog
+                        //For buy actions, whose num_shares are then summed; it's ordered by total_shares, then finally only the top k rownums are picked
+                        String firstpart = "WITH ";
+                        String secondpart = "current_date AS ";
+                        String thirdpart = "(select * from (select * from mutualdate order by c_date desc) where rownum<=1 order by rownum) ";
+                        String fourthpart = "SELECT login, total_shares ";
+                        String fifthpart = "FROM ";
+                        String sixthpart = "(select login, sum(num_shares) as total_shares from trxlog where 'action' = 'buy' and t_date < current_date - INTERVAL";
+                        String seventhpart = " '?' MONTH group by login order by total_shares desc) ";
+                        String eighthpart = "where rownum <=? order by rownum";
+                        String query = firstpart+secondpart+thirdpart+fourthpart+fifthpart+sixthpart+seventhpart+eighthpart;
+                        PreparedStatement stmt = connection.prepareStatement(query); 
+                        stmt.setInt(1, num_months);
+                        stmt.setInt(2, num_investors);                   
+                        resultSet = stmt.executeQuery();                  
+                           if (!resultSet.isBeforeFirst())
+                           {
+                           System.out.println("There were no purchases by investors in this time frame.");
+                           //This is basically a pause
+                           pause = reader.nextLine();                       
+                           }
+                           else
+                           {
+                            int counter = 1;
+                            while (resultSet.next())
+                            {
+                              String investor_name = resultSet.getString(1);
+                              int num_shares = resultSet.getInt(2);
+                              System.out.println("#"+counter+ " investor, " + investor_name + " bought " +num_shares + "shares");                       
+                         
+                            }
+                           }
+                           
+                           
+                        
+                        }
+                        else
+                        {
+                          if (num_investors ==0)
+                          {
+                          quit = true;
+                          }
+                        
+                        }
+                     }
+                     else
+                     {
+                       if (num_months == 0)
+                       {
+                       quit = true;
+                       }
+                     }
+                    
+                    }
+                        
+                    
+                    option=0;
+                    break;
+                 
+               
+                    case 0:
+                    default:
+                    break;
+               }
+           }
+           catch(Exception Ex)
+           {
+           System.out.println("Error with inserting on customer or admin table.  Machine Error: " + Ex.toString());
+           //This is basically a pause
+           pause = reader.nextLine();
+           }
+           
+           
+      }
+   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   void admin_menu()
   {
        String pause;
@@ -381,6 +526,7 @@ void user_menu(String userlogin)
            System.out.println("2: Update share quote");
            System.out.println("3: Add a new fund");
            System.out.println("4: Update the system date");
+           System.out.println("5: View usage statistics");
            Scanner reader = new Scanner(System.in);
           // reader.nextLine();
            option = reader.nextInt();
@@ -1011,8 +1157,9 @@ void user_menu(String userlogin)
                 }
              break;  
              
-             
-             
+             case 5:
+                stats_menu();
+                break;
              
              
              
