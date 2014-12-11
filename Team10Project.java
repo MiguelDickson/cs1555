@@ -237,7 +237,12 @@ void user_menu(String userlogin)
 						stmt.setFloat(2, amt);
 						stmt.registerOutParameter(3, java.sql.Types.INTEGER);
 
+						connection.setAutoCommit(false);
+						connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 						resultSet = stmt.executeQuery();
+						connection.commit();
+						connection.setAutoCommit(true);
+						connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 						
 						// Retrieve success value.
 						success = stmt.getInt(3);
@@ -289,7 +294,13 @@ void user_menu(String userlogin)
 							stmt.registerOutParameter(4, java.sql.Types.FLOAT);
 							stmt.registerOutParameter(5, java.sql.Types.INTEGER);
 
+							connection.setAutoCommit(false);
+							connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 							resultSet = stmt.executeQuery();
+							connection.commit();
+							connection.setAutoCommit(true);
+							connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
 							
 							// Retrieve success value.
 							amt = stmt.getFloat(4);
@@ -355,7 +366,13 @@ void user_menu(String userlogin)
 									stmt.registerOutParameter(4, java.sql.Types.FLOAT);
 									stmt.registerOutParameter(5, java.sql.Types.INTEGER);
 
+									connection.setAutoCommit(false);
+									connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 									resultSet = stmt.executeQuery();
+									connection.commit();
+									connection.setAutoCommit(true);
+									connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
 									
 									// Retrieve success value.
 									amt = stmt.getFloat(4);
@@ -393,8 +410,13 @@ void user_menu(String userlogin)
 									stmt.registerOutParameter(4, java.sql.Types.INTEGER);
 									stmt.registerOutParameter(5, java.sql.Types.FLOAT);
 									stmt.registerOutParameter(6, java.sql.Types.INTEGER);
-
+									
+									connection.setAutoCommit(false);
+									connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 									resultSet = stmt.executeQuery();
+									connection.commit();
+									connection.setAutoCommit(true);
+									connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 									
 									// Retrieve success value.
 									shr = stmt.getInt(4);
@@ -701,7 +723,13 @@ void user_menu(String userlogin)
                                                          stmt.setString(3, email);
                                                          stmt.setString(4, address);
                                                          stmt.setString(5, password);
-                                                         stmt.executeUpdate();
+                                                         connection.setAutoCommit(false);
+														 connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+														 stmt.executeUpdate();
+													 	 connection.commit();
+														 connection.setAutoCommit(true);
+														 connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+														 
                                                          
                                                          stmt = connection.prepareStatement("INSERT INTO CUSTOMER VALUES(?,?,?,?,?)");
                                                          stmt.setString(1, username);
@@ -709,8 +737,12 @@ void user_menu(String userlogin)
                                                          stmt.setString(3, email);
                                                          stmt.setString(4, address);
                                                          stmt.setString(5, password);
-                                                         stmt.setInt(6, 0);
-                                                         stmt.executeUpdate();
+                                                         stmt.setInt(6, 0);connection.setAutoCommit(false);
+														 connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+														 stmt.executeUpdate();
+														 connection.commit();
+														 connection.setAutoCommit(true);
+														 connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
                                                          
                                                          System.out.println("User succesfully added as administrator and customer!");
                                                          //This is basically a pause
@@ -743,7 +775,12 @@ void user_menu(String userlogin)
                                                          stmt.setString(4, address);
                                                          stmt.setString(5, password);
                                                          stmt.setInt(6, 0);
-                                                         stmt.executeUpdate();
+                                                         connection.setAutoCommit(false);
+														 connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+														 stmt.executeUpdate();
+														 connection.commit();
+														 connection.setAutoCommit(true);
+														 connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
                                                          
                                                          System.out.println("User succesfully added as customer!");
                                                          //This is basically a pause
