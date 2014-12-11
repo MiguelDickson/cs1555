@@ -921,12 +921,8 @@ void user_menu(String userlogin)
                 }
              break;  
              
-             
-             
-             
-             
-             
-             case 0:
+            
+             case 5:
              default:
              break;
              
