@@ -15,7 +15,9 @@ import java.text.ParseException;
                     //needed by java for database connection and manipulation
                     
 import java.util.Scanner;
-
+import java.lang.*;
+import java.lang.Integer;
+import java.text.SimpleDateFormat;
                 
 public class Team10Project
 {
@@ -246,9 +248,7 @@ void user_menu(String userlogin)
        String address;
        String name;
        
-       //For new pricequote 
-      
-       
+            
        //For new pricequote & mutualfund
        String mfsymbol;
        String mfname;
@@ -258,7 +258,19 @@ void user_menu(String userlogin)
        Date latestquotedate;
        float newprice;
        
+       //For new sysdate
+       String currentdate;
+       String newdatestr;
+       String newmonthstr;
+       String curryearstr;
+       String currmonthstr;
+       String currdaystr;      
        
+       int curryear;
+       int currmonth;
+       int currday;
+       Date newdate;
+ 
        int option=-1;
        final String ANSI_CLS = "\u001b[2J";
        final String ANSI_HOME = "\u001b[H";
@@ -273,7 +285,7 @@ void user_menu(String userlogin)
            System.out.println("1: Add new user");
            System.out.println("2: Update share quote");
            System.out.println("3: Add a new fund");
-           //System.out.println("4: Update date and time");
+           System.out.println("4: Update the system date");
            Scanner reader = new Scanner(System.in);
           // reader.nextLine();
            option = reader.nextInt();
@@ -692,6 +704,223 @@ void user_menu(String userlogin)
                 }
                 break;    
          
+             case 4:
+                quit =false;
+                try{
+                   while (quit==false)
+                   {
+                 //Check whether there's a valid date already in the DB
+                            PreparedStatement pulldate = connection.prepareStatement("SELECT * FROM MUTUALDATE ORDER BY C_DATE DESC");
+                            resultSet2 = pulldate.executeQuery();
+                            if (resultSet2.isBeforeFirst()) //There is; keep going - and check that the date entered by the user is legitimate
+                            {
+                              resultSet2.next();
+                              latestdate = resultSet2.getDate(1);
+                              resultSet2.close();
+                              currentdate = latestdate.toString();
+                              curryearstr = currentdate.substring(0,4);
+                              currmonthstr = currentdate.substring(5,7);
+                              currdaystr = currentdate.substring(8,10);
+                              curryear = Integer.parseInt(curryearstr);
+                              currmonth = Integer.parseInt(currmonthstr);
+                              currday = Integer.parseInt(currdaystr);
+                              System.out.println("The current system date is: " + currentdate);
+                              System.out.println("Please enter the new system year: [Type 0 to quit.]");
+                              int nextyear;
+                              int nextmonth;
+                              int nextday;
+                              nextyear = reader.nextInt();
+                              pause = reader.nextLine();
+                              
+                                if ((!(nextyear ==0))  && (nextyear >= curryear))
+                                {
+                                  System.out.println("Please enter the new system month (where 1 is January, 2 is February, etc.): [Type 0 to quit]:");
+                                  nextmonth = reader.nextInt();
+                                  pause = reader.nextLine();
+                                 
+                                    if ((!(nextmonth ==0)) && (!(nextmonth > 12)) && (!((nextmonth < currmonth) && (curryear == nextyear))))
+                                    {
+                                        System.out.println("Please enter the new system day: [Type 0 to quit]:");
+                                        nextday = reader.nextInt();
+                                        pause = reader.nextLine();
+                                          
+                                          if ((!(nextday ==0)) && (!(nextday > 31)) && (! ((nextday < currday) && (curryear == nextyear) && (currmonth == nextmonth))))
+                                          {
+                                                 newdatestr = Integer.toString(nextday) + "-" + Integer.toString(nextmonth) + "-" + Integer.toString(nextyear); 
+                                                 //Nextmonth-1 because in this (deprecated) constructor, month was 0-indexed.
+                                                 newdate = new Date(nextyear, (nextmonth-1), nextday);
+                                                 //System.out.println("The new date string is: |" + newdatestr);
+                                                 newdatestr = "";
+                                                 newmonthstr = new SimpleDateFormat("MMM").format(newdate);
+                                                 System.out.println(nextmonth);
+                                                 
+                                                 newdatestr = Integer.toString(nextday) + "-" + new SimpleDateFormat("MMM").format(newdate) + "-" + Integer.toString(nextyear);
+                                                 //System.out.println("The new date string is: |" + newdatestr);
+                                                 //System.out.println(newdate);
+                                                 connection.setAutoCommit(false);
+                                                 connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                                                 PreparedStatement stmt = connection.prepareStatement("INSERT INTO MUTUALDATE VALUES(?)");
+                                                 stmt.setString(1, newdatestr);
+                                                 stmt.executeUpdate();
+                                                 connection.commit();
+                                                 connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                                                 connection.setAutoCommit(true);
+                                                 quit = true;
+                                                 
+                                                 System.out.println("New system date succesfully added!");
+                                                  //This is basically a pause
+                                                 pause = reader.nextLine();
+                                          }
+                                          else
+                                          {
+                                                if (nextday ==0)
+                                                {
+                                                    quit = true;
+                                                }
+                                                else
+                                                {
+                                                System.out.println("The new system date must be *after* the current system date and the new system day between 1-31.");  
+                                                 //This is basically a pause
+                                                 pause = reader.nextLine();                                                
+                                                }   
+                                          }
+                                          
+                                    }
+                                   
+                                    else
+                                    {
+                                        if (nextmonth ==0)
+                                        {
+                                            quit = true;
+                                        }
+                                        else
+                                        {
+                                            System.out.println("The new system month must be *after* the current system date and/or between 1-12.");      
+                                            //This is basically a pause
+                                             pause = reader.nextLine();                                         
+                                        }                                    
+                                    }
+
+
+                                }
+                                else
+                                {
+                                    if (nextyear ==0)
+                                    {
+                                        quit = true;
+                                    }
+                                    else
+                                    {
+                                    System.out.println("The new system date must be *after* the current system date.");   
+                                    //This is basically a pause
+                                    pause = reader.nextLine();                                      
+                                    }
+                                }
+                              
+                            }
+                            else //Just add the new date if it's legit
+                            {
+                              int nextyear;
+                              int nextmonth;
+                              int nextday;
+                              System.out.println("Please enter the new system year: [Type 0 to quit.]");
+                              nextyear = reader.nextInt();
+                              pause = reader.nextLine();
+                              
+                                if ((!(nextyear ==0)))
+                                {
+                                  System.out.println("Please enter the new system month (where 1 is January, 2 is February, etc.): [Type 0 to quit]:");
+                                  nextmonth = reader.nextInt();
+                                  pause = reader.nextLine();
+                                 
+                                    if ((!(nextmonth ==0)) && (!(nextmonth > 12)))
+                                    {
+                                        System.out.println("Please enter the new system day: [Type 0 to quit]:");
+                                        nextday = reader.nextInt();
+                                        pause = reader.nextLine();
+                                          
+                                          if ((!(nextday ==0)) && (!(nextday > 31)))
+                                          {
+                                                 newdatestr = Integer.toString(nextday) + "-" + Integer.toString(nextmonth) + "-" + Integer.toString(nextyear); 
+                                                 //Nextmonth-1 because in this (deprecated) constructor, month was 0-indexed.
+                                                 newdate = new Date(nextyear, (nextmonth-1), nextday);
+                                                // System.out.println("The new date string is: |" + newdatestr);
+                                                 newdatestr = "";
+                                                 newmonthstr = new SimpleDateFormat("MMM").format(newdate);
+                                                // System.out.println(nextmonth);
+                                                 
+                                                 newdatestr = Integer.toString(nextday) + "-" + new SimpleDateFormat("MMM").format(newdate) + "-" + Integer.toString(nextyear);
+                                               //  System.out.println("The new date string is: |" + newdatestr);
+                                                 //System.out.println(newdate);
+                                                 connection.setAutoCommit(false);
+                                                 connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                                                 PreparedStatement stmt = connection.prepareStatement("INSERT INTO MUTUALDATE VALUES(?)");
+                                                 stmt.setString(1, newdatestr);
+                                                 stmt.executeUpdate();
+                                                 connection.commit();
+                                                 connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                                                 connection.setAutoCommit(true);
+                                                 quit = true;
+                                                 
+                                                 System.out.println("New system date succesfully added!");
+                                                  //This is basically a pause
+                                                 pause = reader.nextLine();
+                                          }
+                                          else
+                                          {
+                                                if (nextday ==0)
+                                                {
+                                                    quit = true;
+                                                }
+                                                else
+                                                {
+                                                System.out.println("The new system day must be between 1-31.");  
+                                                 //This is basically a pause
+                                                 pause = reader.nextLine();                                                
+                                                }   
+                                          }
+                                          
+                                    }
+                                   
+                                    else
+                                    {
+                                        if (nextmonth ==0)
+                                        {
+                                            quit = true;
+                                        }
+                                        else
+                                        {
+                                            System.out.println("The new system month must be between 1-12.");      
+                                            //This is basically a pause
+                                             pause = reader.nextLine();                                         
+                                        }                                    
+                                    }
+
+
+                                }
+                                else
+                                {
+                                    if (nextyear ==0)
+                                    {
+                                        quit = true;
+                                    }
+                                  
+                                }   
+                
+                            }
+                   }
+                }
+                catch(Exception Ex)
+                {
+                 System.out.println("Error with inserting on mutualdate table.  Machine Error: " + Ex.toString());
+                }
+             break;  
+             
+             
+             
+             
+             
+             
              case 0:
              default:
              break;
