@@ -251,8 +251,8 @@ void user_menu(String userlogin)
 	int success;	// Return value from transaction stored procedures
 	String choice;	// For purchase type
 	int chc;
-	Date latestdate; // For allocation preferences
-	Date latestallocdate; // For allocation preferences
+	String latestdate; // For allocation preferences
+	String latestallocdate; // For allocation preferences
 	
 	while (option!=0)
 	{
@@ -268,7 +268,7 @@ void user_menu(String userlogin)
 		System.out.println("3: Deposit into account (auto-buy)");
 		System.out.println("4: Sell shares");
 		System.out.println("5: Purchase shares");
-		System.out.println("6: Change allocation preferences");
+		// System.out.println("6: Change allocation preferences");
 		Scanner reader = new Scanner(System.in);
 		//reader.nextLine();
 		option = reader.nextInt();
@@ -527,22 +527,22 @@ void user_menu(String userlogin)
 					pause = reader.nextLine();
 				}
 			break;
-			
+			/*
 			case 6:
 				try
 				{	
 					// First, check the date.
-					PreparedStatement pulldate = connection.prepareStatement("SELECT MONTH(C_DATE), YEAR(C_DATE) FROM MUTUALDATE ORDER BY C_DATE DESC");
+					PreparedStatement pulldate = connection.prepareStatement("SELECT EXTRACT(MONTH FROM C_DATE), EXTRACT(YEAR FROM C_DATE) FROM MUTUALDATE ORDER BY C_DATE DESC");
 					resultSet2 = pulldate.executeQuery();
 					if (resultSet2.isBeforeFirst()) //There is; keep going
 					{
 						resultSet2.next();
-						latestdate = resultSet2.getDate(1);
+						latestdate = resultSet2.getString(1);
 						// Get user's last allocation date.
-						pulldate = connection.prepareStatement("SELECT MONTH(P_DATE), YEAR(P_DATE) FROM ALLOCATION WHERE login = ? ORDER BY P_DATE DESC");
-						connection.setString(1, userlogin);
+						pulldate = connection.prepareStatement("SELECT EXTRACT(MONTH FROM P_DATE), EXTRACT(YEAR FROM P_DATE) FROM ALLOCATION WHERE login = ? ORDER BY P_DATE DESC");
+						pulldate.setString(1, userlogin);
 						resultSet2 = pulldate.executeQuery();
-						latestallocdate = resultSet2.getDate(1);
+						latestallocdate = resultSet2.getString(1);
 						if(!latestdate.equals(latestallocdate))
 							System.out.println("You may reassign your allocation.");
 						else
@@ -557,7 +557,7 @@ void user_menu(String userlogin)
 					pause = reader.nextLine();
 				}
 			break;
-			
+			*/
 			case 0:
 			default:
 			break;
