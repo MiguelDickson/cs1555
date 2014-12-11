@@ -164,10 +164,18 @@ public static boolean isInteger(String s) {
 	} catch(NumberFormatException e) { 
 		return false; 
 	}
-	// only got here if we didn't return false
 	return true;
 }
-  
+
+// Check if input is float
+public static boolean isFloat(String s) {
+	try { 
+		Float.parseFloat(s); 
+	} catch(NumberFormatException e) { 
+		return false; 
+	}
+	return true;
+}
   
 //Takes userlogin for various queries
 void user_menu(String userlogin)
@@ -178,9 +186,10 @@ void user_menu(String userlogin)
 	
 	// For transaction values.
 	String amount;
-	int amt;
-	String numStocks;
-	int stk;
+	float amt;
+	String symbol;
+	String numShares;
+	int shr;
 	int success;	// Return value from transaction stored procedures
 	
 	
@@ -196,7 +205,7 @@ void user_menu(String userlogin)
 		System.out.println("1: Browse Mutual Funds");
 		//System.out.println("2: ");
 		System.out.println("3: Deposit into account");
-		//System.out.println("4: ");
+		System.out.println("4: Sell shares");
 		Scanner reader = new Scanner(System.in);
 		//reader.nextLine();
 		option = reader.nextInt();
@@ -211,18 +220,19 @@ void user_menu(String userlogin)
 				try
 				{	
 					System.out.println("Please enter the amount you would like to deposit [Type QUIT to quit]:");
+					System.out.print("$");
 					amount = reader.nextLine();
-					if (!amount.equals("QUIT") && isInteger(amount))
+					if (!amount.equals("QUIT") && isFloat(amount))
 					{
 						// System.out.println("TESTING: Inside the if block.");
 						// pause = reader.nextLine();
-						amt = Integer.parseInt(amount);
+						amt = Float.parseFloat(amount);
 						success = -1;
 						
 						// Get ready to execute this stored procedure...
 						CallableStatement stmt = connection.prepareCall("CALL deposit(?,?,?)");
 						stmt.setString(1, userlogin);
-						stmt.setInt(2, amt);
+						stmt.setFloat(2, amt);
 						stmt.registerOutParameter(3, java.sql.Types.INTEGER);
 
 						resultSet = stmt.executeQuery();
@@ -243,6 +253,64 @@ void user_menu(String userlogin)
 					else
 					{
 						System.out.println("Sorry, invalid amount!");
+						//This is basically a pause
+						pause = reader.nextLine();
+					}
+				}
+				catch(Exception Ex)
+				{
+					System.out.println("Error with inserting on customer or admin table.  Machine Error: " + Ex.toString());
+					//This is basically a pause
+					pause = reader.nextLine();
+				}
+			break;
+			
+			case 4:
+				try
+				{	
+					System.out.println("Please indicate the symbol of the fund you would like to sell shares of (No more than 20 characters!) [Type QUIT to quit]:");
+					symbol = reader.nextLine();
+					if (!symbol.equals("QUIT") && symbol.length() <= 20)
+					{
+						System.out.println("Please indicate how many shares you would like to sell [Type QUIT to quit]:");
+						numShares = reader.nextLine();
+						if (!numShares.equals("QUIT") && isInteger(numShares))
+						{
+							shr = Integer.parseInt(numShares);
+							success = -1;
+							
+							// Get ready to execute this stored procedure...
+							CallableStatement stmt = connection.prepareCall("CALL sale(?,?,?,?,?)");
+							stmt.setString(1, userlogin);
+							stmt.setString(2, symbol);
+							stmt.setInt(3, shr);
+							stmt.registerOutParameter(4, java.sql.Types.FLOAT);
+							stmt.registerOutParameter(5, java.sql.Types.INTEGER);
+
+							resultSet = stmt.executeQuery();
+							
+							// Retrieve success value.
+							amt = stmt.getFloat(4);
+							success = stmt.getInt(5);
+							// System.out.println("TESTING: " + success);
+							if(success == 1)
+								System.out.println("Success! " + shr + " shares sold, and $" + amt + " earned.");
+							else if(success == 0)
+								System.out.println("Error: unsuccessful sale.");
+							else
+								System.out.println("Error: no value returned");
+							pause = reader.nextLine();
+						}
+						else
+						{
+							System.out.println("Sorry, invalid number of shares!");
+							//This is basically a pause
+							pause = reader.nextLine();
+						}
+					}
+					else
+					{
+						System.out.println("Sorry, invalid fund symbol!");
 						//This is basically a pause
 						pause = reader.nextLine();
 					}

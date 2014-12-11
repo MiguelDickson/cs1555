@@ -453,7 +453,7 @@ END;
 /
 
 -- sale subtracts a number of shares of a fund, and adds its sale value to the user's balance.
-CREATE OR REPLACE PROCEDURE sale(logi IN varchar, symb IN varchar, numshare IN number, success OUT number)
+CREATE OR REPLACE PROCEDURE sale(logi IN varchar, symb IN varchar, numshare IN number, proceeds OUT float, success OUT number)
 AS
     has_shares number;
 BEGIN
@@ -471,10 +471,12 @@ BEGIN
 		THEN
             dbms_output.put_line('Selling shares!');
             UPDATE OWNS set shares = has_shares - numshare WHERE login = logi AND symbol = symb;
-			add_trx(logi, symb, 'sell', numshare, get_last_closing_price(symb), numshare * get_last_closing_price(symb));
+			proceeds := numshare * get_last_closing_price(symb);
+			add_trx(logi, symb, 'sell', numshare, get_last_closing_price(symb), proceeds);
 			success := 1;
 		ELSE
             dbms_output.put_line('Cannot sell more shares than you have, bro!!');
+			proceeds := 0;
 			success := 0;
         END IF;
 		
