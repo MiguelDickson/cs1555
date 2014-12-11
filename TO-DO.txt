@@ -59,7 +59,7 @@ admin_menu
     5) manually update date (set latest date as what user sets IFF after last(mutual_date)) (1) 
     6) generate statistics (3)
         past x months (highest count of shares sold)
-        most investors
+        most investors (-CHECK)
     
 
 USER MANUAL - CHECK

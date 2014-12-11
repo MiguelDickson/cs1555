@@ -502,9 +502,77 @@ void user_menu(String userlogin)
                     case 1:
                     quit = false;
                     while (quit == false)
-                    {
-                    //take this out after.
-                    quit = true;
+                    { System.out.println("Please enter how many months back from the current system date you wish to search: [Type 0 to quit]:");
+                     num_months = reader.nextInt();
+                     pause = reader.nextLine();
+                     if (num_months > 0)
+                     {
+                      int num_investors = 0;
+                      System.out.println("Please enter how many of the top categories you wish to find (from the top category down): [Type 0 to quit]:");
+                      num_investors = reader.nextInt();
+                      pause = reader.nextLine();
+                        if (num_investors > 0)
+                        {
+                        
+                        //The innermost query selects for the most recent date. X months is subtracted from that to form the time period to search through the trxlog
+                        //For buy actions, whose num_shares are then summed; it's ordered by total_shares, then finally only the top k rownums are picked
+                        String firstpart = "WITH ";
+                        String secondpart = "current_date AS ";
+                        String thirdpart = "(select * from (select * from mutualdate order by c_date desc) where rownum<=1 order by rownum) ";
+                        String fourthpart = "SELECT login, total_shares ";
+                        String fifthpart = "FROM ";
+                        String sixthpart = "(select login, sum(num_shares) as total_shares from trxlog where 'action' = 'buy' and t_date < current_date - INTERVAL";
+                        String seventhpart = " '" + Integer.toString(num_months) + "' MONTH group by login order by total_shares desc) ";
+                        String eighthpart = "where rownum <=" + Integer.toString(num_investors) +" order by rownum";
+                        String query = firstpart+secondpart+thirdpart+fourthpart+fifthpart+sixthpart+seventhpart+eighthpart;
+                        Statement stmt = connection.createStatement();
+                        //query); 
+                        //stmt.setInt(1, num_months);
+                        //stmt.setInt(2, num_investors);                   
+                        resultSet = stmt.executeQuery(query);                  
+                           if (!resultSet.isBeforeFirst())
+                           {
+                           System.out.println("There were no purchases by investors in this time frame.");
+                           quit = true;
+                           //This is basically a pause
+                           pause = reader.nextLine();                       
+                           }
+                           else
+                           {
+                            int counter = 1;
+                            while (resultSet.next())
+                            {
+                              String investor_name = resultSet.getString(1);
+                              int num_shares = resultSet.getInt(2);
+                              System.out.println("#"+counter+ " investor, " + investor_name + " bought " +num_shares + "shares");                       
+                         
+                            }
+                             System.out.println("Press any key and hit enter to return to the usage statistics menu.");
+                             quit = true;
+                             //This is basically a pause
+                             pause = reader.nextLine();  
+                           }
+                           
+                           
+                        
+                        }
+                        else
+                        {
+                          if (num_investors ==0)
+                          {
+                          quit = true;
+                          }
+                        
+                        }
+                     }
+                     else
+                     {
+                       if (num_months == 0)
+                       {
+                       quit = true;
+                       }
+                     }
+ 
                     }
                     
                     option = 0;
