@@ -191,6 +191,8 @@ void user_menu(String userlogin)
 	String numShares;
 	int shr;
 	int success;	// Return value from transaction stored procedures
+	String choice;	// For purchase type
+	int chc
 	
 	
 	while (option!=0)
@@ -319,6 +321,76 @@ void user_menu(String userlogin)
 				{
 					System.out.println("Error with inserting on customer or admin table.  Machine Error: " + Ex.toString());
 					//This is basically a pause
+					pause = reader.nextLine();
+				}
+			break;
+			
+			case 5:
+				try
+				{	
+					System.out.println("Please indicate the symbol of the fund you would like to purchase shares of (No more than 20 characters!) [Type QUIT to quit]:");
+					symbol = reader.nextLine();
+					if (!symbol.equals("QUIT") && symbol.length() <= 20)
+					{
+						System.out.println("Press 1 if you'd like to input a certain number of shares to purchase.");
+						System.out.println("Press 2 if you'd like to input a certain of money to expend on shares. [Type QUIT to quit]:");
+						choice = reader.nextLine();
+						if (!choice.equals("QUIT") && isInteger(choice))
+						{
+							while(chc != 1 || chc != 2)
+							{
+								System.out.println("Invalid input.");
+								System.out.println("Press 1 if you'd like to input a certain number of shares to purchase.");
+								System.out.println("Press 2 if you'd like to input a certain of money to expend on shares. [Type QUIT to quit]:");
+								choice = reader.nextLine();
+								if(choice.equals("QUIT");
+							
+							
+							chc = Integer.parseInt(choice);
+							// if(chc = 1;
+							
+							success = -1;
+							
+							// Get ready to execute this stored procedure...
+							CallableStatement stmt = connection.prepareCall("CALL sale(?,?,?,?,?)");
+							stmt.setString(1, userlogin);
+							stmt.setString(2, symbol);
+							stmt.setInt(3, shr);
+							stmt.registerOutParameter(4, java.sql.Types.FLOAT);
+							stmt.registerOutParameter(5, java.sql.Types.INTEGER);
+
+							resultSet = stmt.executeQuery();
+							
+							// Retrieve success value.
+							amt = stmt.getFloat(4);
+							success = stmt.getInt(5);
+							// System.out.println("TESTING: " + success);
+							if(success == 1)
+								System.out.println("Success! " + shr + " shares sold, and $" + amt + " earned.");
+							else if(success == 0)
+								System.out.println("Error: unsuccessful sale.");
+							else
+								System.out.println("Error: no value returned");
+							pause = reader.nextLine();
+						}
+						else
+						{
+							System.out.println("Sorry, invalid number of shares!");
+							// This is basically a pause
+							pause = reader.nextLine();
+						}
+					}
+					else
+					{
+						System.out.println("Sorry, invalid fund symbol!");
+						// This is basically a pause
+						pause = reader.nextLine();
+					}
+				}
+				catch(Exception Ex)
+				{
+					System.out.println("Error with inserting on customer or admin table.  Machine Error: " + Ex.toString());
+					// This is basically a pause
 					pause = reader.nextLine();
 				}
 			break;
