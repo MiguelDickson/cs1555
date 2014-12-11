@@ -207,16 +207,14 @@ void user_menu(String userlogin)
 			break;
 
 			case 3:
-				System.out.print(ANSI_CLS + ANSI_HOME);
-				System.out.flush();
 				try
 				{	
 					System.out.println("Please enter the amount you would like to deposit [Type QUIT to quit]:");
 					amount = reader.nextLine();
 					if (!amount.equals("QUIT") && isInteger(amount))
 					{
-						System.out.println("TESTING: Inside the if block.");
-						pause = reader.nextLine();
+						// System.out.println("TESTING: Inside the if block.");
+						// pause = reader.nextLine();
 						amt = Integer.parseInt(amount);
 						CallableStatement stmt = connection.prepareCall("CALL deposit(?,?)");
 						stmt.setString(1, userlogin);
