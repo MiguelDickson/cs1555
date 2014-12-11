@@ -619,6 +619,7 @@ END;
  /* --TESTING-- */
 /* ----------- */
 
+/*
 -- Testing deposit with lots of money
 exec deposit('mike', 99999);
 select * from owns;

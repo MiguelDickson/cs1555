@@ -218,10 +218,10 @@ void user_menu(String userlogin)
 						System.out.println("TESTING: Inside the if block.");
 						pause = reader.nextLine();
 						amt = Integer.parseInt(amount);
-						CallableStatement stmt = connection.prepareCall("EXEC deposit(?,?)");
+						CallableStatement stmt = connection.prepareCall("CALL deposit(?,?)");
 						stmt.setString(1, userlogin);
 						stmt.setInt(2, amt);
-						resultSet = stmt.execute();
+						resultSet = stmt.executeQuery();
 						System.out.println("Done! Not sure if success or not.");
 						pause = reader.nextLine();
 					}
