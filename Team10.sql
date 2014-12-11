@@ -490,11 +490,10 @@ END;
 /
 
 -- purchase1 adds a number of shares of a fund, and subtracts its buy value from the user's balance.
-CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number, success OUT number)
+CREATE OR REPLACE PROCEDURE purchase1(logi IN varchar, symb IN varchar, numshare IN number, price_shares OUT number, success OUT number)
 AS
     curr_price number;
     curr_balance number;
-    price_shares number;
 BEGIN
     execute immediate 'ALTER TRIGGER on_deposit DISABLE';
     IF numshare <= 0
@@ -533,11 +532,10 @@ END;
 /
 
 -- purchase2 adds as many shares of a fund as the given amount can afford, and subtracts the price from the user's balance.
-CREATE OR REPLACE PROCEDURE purchase2(logi IN varchar, symb IN varchar, amount IN number, success OUT number)
+CREATE OR REPLACE PROCEDURE purchase2(logi IN varchar, symb IN varchar, amount IN number, shares_bought OUT number, final_cost OUT float, success OUT number)
 AS
     curr_price number;
     curr_balance number;
-    shares_bought number;
 BEGIN
     execute immediate 'ALTER TRIGGER on_deposit DISABLE';
     IF amount <= 0
@@ -566,7 +564,7 @@ BEGIN
 			IF shares_bought = 0
 			THEN
 				dbms_output.put_line('Cannot afford a single share, bro!!');
-				success := 0;
+				success := 1;
 			ELSE
 				IF has_shares(logi, symb) = 1
 				THEN
@@ -577,9 +575,10 @@ BEGIN
 				-- dbms_output.put_line(curr_balance);
 				-- dbms_output.put_line(shares_bought);
 				-- dbms_output.put_line(get_last_closing_price(symb));
-				UPDATE CUSTOMER set balance = (curr_balance - (shares_bought * curr_price)) WHERE login = logi;
-				add_trx(logi, symb, 'buy', shares_bought, curr_price, shares_bought * curr_price);
-				success := 1;
+				final_cost := shares_bought * curr_price;
+				UPDATE CUSTOMER set balance = (curr_balance - final_cost) WHERE login = logi;
+				add_trx(logi, symb, 'buy', shares_bought, curr_price, final_cost);
+				success := 2;
 			END IF;
 		END IF;
     END IF;

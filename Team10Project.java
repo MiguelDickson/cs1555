@@ -101,12 +101,11 @@ public class Team10Project
                              //resultSet.close();
                              System.out.print(ANSI_CLS + ANSI_HOME);
                              System.out.flush();
-                             System.out.println("SYMBOL               NAME");
-                             System.out.println("-------------------- ------------------------------");
+                             System.out.println("-----------------------");
+                             System.out.println("SYMBOL   NAME");
                              System.out.println("DESCRIPTION");
-                             System.out.println("-------------");
                              System.out.println("CATEGORY   DATE_CREATED");
-                             System.out.println("---------- ---------------");
+                             System.out.println("-----------------------");
                              System.out.println("");
                              while(resultSet.next())
                              {
@@ -192,7 +191,7 @@ void user_menu(String userlogin)
 	int shr;
 	int success;	// Return value from transaction stored procedures
 	String choice;	// For purchase type
-	int chc
+	int chc;
 	
 	
 	while (option!=0)
@@ -206,8 +205,9 @@ void user_menu(String userlogin)
 		System.out.println("0: Logout");
 		System.out.println("1: Browse Mutual Funds");
 		//System.out.println("2: ");
-		System.out.println("3: Deposit into account");
+		System.out.println("3: Deposit into account (auto-buy)");
 		System.out.println("4: Sell shares");
+		System.out.println("5: Purchase shares");
 		Scanner reader = new Scanner(System.in);
 		//reader.nextLine();
 		option = reader.nextInt();
@@ -274,7 +274,7 @@ void user_menu(String userlogin)
 					symbol = reader.nextLine();
 					if (!symbol.equals("QUIT") && symbol.length() <= 20)
 					{
-						System.out.println("Please indicate how many shares you would like to sell [Type QUIT to quit]:");
+						System.out.println("Please indicate how many shares of " + symbol + " you would like to sell [Type QUIT to quit]:");
 						numShares = reader.nextLine();
 						if (!numShares.equals("QUIT") && isInteger(numShares))
 						{
@@ -333,49 +333,95 @@ void user_menu(String userlogin)
 					if (!symbol.equals("QUIT") && symbol.length() <= 20)
 					{
 						System.out.println("Press 1 if you'd like to input a certain number of shares to purchase.");
-						System.out.println("Press 2 if you'd like to input a certain of money to expend on shares. [Type QUIT to quit]:");
+						System.out.println("Press 2 if you'd like to input a certain amount of money to expend on shares. [Type QUIT to quit]:");
 						choice = reader.nextLine();
-						if (!choice.equals("QUIT") && isInteger(choice))
+						if (!choice.equals("QUIT") && isInteger(choice) && (Integer.parseInt(choice) == 1 || Integer.parseInt(choice) == 2)) // please save us short-circuit
 						{
-							while(chc != 1 || chc != 2)
-							{
-								System.out.println("Invalid input.");
-								System.out.println("Press 1 if you'd like to input a certain number of shares to purchase.");
-								System.out.println("Press 2 if you'd like to input a certain of money to expend on shares. [Type QUIT to quit]:");
-								choice = reader.nextLine();
-								if(choice.equals("QUIT");
-							
-							
 							chc = Integer.parseInt(choice);
-							// if(chc = 1;
-							
-							success = -1;
-							
-							// Get ready to execute this stored procedure...
-							CallableStatement stmt = connection.prepareCall("CALL sale(?,?,?,?,?)");
-							stmt.setString(1, userlogin);
-							stmt.setString(2, symbol);
-							stmt.setInt(3, shr);
-							stmt.registerOutParameter(4, java.sql.Types.FLOAT);
-							stmt.registerOutParameter(5, java.sql.Types.INTEGER);
+							if(chc == 1)
+							{
+								System.out.println("Please indicate the number of shares of " + symbol + " you'd like to purchase [Type QUIT to quit]:");
+								numShares = reader.nextLine();
+								if (!numShares.equals("QUIT") && isInteger(numShares))
+								{
+									shr = Integer.parseInt(numShares);
+									success = -1;
+									
+									// Get ready to execute this stored procedure...
+									CallableStatement stmt = connection.prepareCall("CALL purchase1(?,?,?,?,?)");
+									stmt.setString(1, userlogin);
+									stmt.setString(2, symbol);
+									stmt.setInt(3, shr);
+									stmt.registerOutParameter(4, java.sql.Types.FLOAT);
+									stmt.registerOutParameter(5, java.sql.Types.INTEGER);
 
-							resultSet = stmt.executeQuery();
-							
-							// Retrieve success value.
-							amt = stmt.getFloat(4);
-							success = stmt.getInt(5);
-							// System.out.println("TESTING: " + success);
-							if(success == 1)
-								System.out.println("Success! " + shr + " shares sold, and $" + amt + " earned.");
-							else if(success == 0)
-								System.out.println("Error: unsuccessful sale.");
+									resultSet = stmt.executeQuery();
+									
+									// Retrieve success value.
+									amt = stmt.getFloat(4);
+									success = stmt.getInt(5);
+									// System.out.println("TESTING: " + success);
+									if(success == 1)
+										System.out.println("Success! " + shr + " shares of " + symbol + " bought, and $" + amt + " spent.");
+									else if(success == 0)
+										System.out.println("Error: unsuccessful purchase.");
+									else
+										System.out.println("Error: no value returned");
+									pause = reader.nextLine();
+								}
+								else
+								{
+									System.out.println("Sorry, invalid number of shares!");
+									// This is basically a pause
+									pause = reader.nextLine();
+								}
+							}
 							else
-								System.out.println("Error: no value returned");
-							pause = reader.nextLine();
+							{
+								System.out.println("Please indicate the amount of money you'd like to expend on shares of " + symbol + " [Type QUIT to quit]:");
+								amount = reader.nextLine();
+								if (!amount.equals("QUIT") && isFloat(amount))
+								{
+									amt = Float.parseFloat(amount);
+									success = -1;
+									
+									// Get ready to execute this stored procedure...
+									CallableStatement stmt = connection.prepareCall("CALL purchase2(?,?,?,?,?,?)");
+									stmt.setString(1, userlogin);
+									stmt.setString(2, symbol);
+									stmt.setFloat(3, amt);
+									stmt.registerOutParameter(4, java.sql.Types.INTEGER);
+									stmt.registerOutParameter(5, java.sql.Types.FLOAT);
+									stmt.registerOutParameter(6, java.sql.Types.INTEGER);
+
+									resultSet = stmt.executeQuery();
+									
+									// Retrieve success value.
+									shr = stmt.getInt(4);
+									amt = stmt.getFloat(5);
+									success = stmt.getInt(6);
+									// System.out.println("TESTING: " + success);
+									if(success == 2)
+										System.out.println("Success! " + shr + " shares of " + symbol + " bought with $" + amt + ".");
+									else if(success == 1)
+										System.out.println("Not enough to purchase any shares of " + symbol + ".");
+									else if(success == 0)
+										System.out.println("Error: unsuccessful purchase.");
+									else
+										System.out.println("Error: no value returned");
+									pause = reader.nextLine();
+								}
+								else
+								{
+									System.out.println("Sorry, invalid amount!");
+									// This is basically a pause
+									pause = reader.nextLine();
+								}
+							}
 						}
 						else
 						{
-							System.out.println("Sorry, invalid number of shares!");
+							System.out.println("Sorry, invalid choice!");
 							// This is basically a pause
 							pause = reader.nextLine();
 						}
