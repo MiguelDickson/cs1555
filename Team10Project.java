@@ -79,13 +79,8 @@ public class Team10Project
            System.out.flush();
            System.out.println("Browsing mutual funds!");
            System.out.println("Your options:");
-<<<<<<< HEAD
            System.out.println("0: Back to User Menu");
            System.out.println("1: Print all mutual funds in alphabetical order");
-=======
-           System.out.println("0: Logout");
-           System.out.println("3: Print all mutual funds in alphabetical order:");
->>>>>>> origin/master
            //System.out.println("2: ");
            //System.out.println("3: ");
            //System.out.println("4: ");
